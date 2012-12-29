@@ -79,6 +79,8 @@ Freenode, where you can try the bot out. However, to avoid triggering
 other bots that may be in that channel, you should change the prefix to
 something fairly non-obvious.
 EOF
+  else
+    puts help
   end
 else
   puts help

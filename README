@@ -37,7 +37,7 @@ change in the configuration file.
 Having set things up just so in the config file, typing `./yoleaux run`
 will kick things off and get the bot running. Yoleaux always runs in the
 foreground; use an external script if you want to daemonise the bot.
-Likewise, logs cannot be printed anywhere other than standard-error; use
+Likewise, logs cannot be printed anywhere other than standard-out; use
 a pipe to write them to a file.
 
                                ____________________________
