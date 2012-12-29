@@ -1,0 +1,14 @@
+
+The following options are available in the config.yaml file:
+
+  nick            Nick the bot will use
+  user            (optional; default is nick) Bot's 'username'
+  realname        (optional; default is 'Yoleaux L. Only-Once') Bot's 'real name'
+  server          Address of the IRC server for the bot to connect to
+  port            (optional; default is 6667) 
+  channels        A list of channels for the bot to join by default
+  admins          A list of the nicks of users who will be allowed to use admin commands
+  command_timeout How long, in seconds, a command is allowed to run for
+  workers         The number of worker processes to create
+  prefix          What the bot's command prefix (e.g. '.', '!', etc) will be
+

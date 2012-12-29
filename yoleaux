@@ -1,0 +1,86 @@
+#!/usr/bin/env ruby
+
+require 'getoptlong'
+require './yoleaux.rb'
+
+base = "#{ENV['HOME']}/.yoleaux"
+Dir.mkdir base if not File.directory? base
+dowhat = ARGV[0]
+
+help = <<-EOF
+yoleaux action [...]
+
+Action can be one of:
+    create     Perform the initial configuration for setting up the bot.
+    run        Run the bot, using the settings in the config.
+    help       Show this help page.
+
+"yoleaux help action" will get help on a specific action.
+
+Tips:
+    Logging is always to stdout. Use a pipe to maintain logs, like this:
+      $ yoleaux run > yoleaux.log
+      $ yoleaux run | tee yoleaux.log
+    
+    Yoleaux does not have an option to run as a daemon. Use an external
+    service like daemonize, daemontools, screen or the shell's nohup/&
+    if you wish to run Yoleaux in the background.
+      $ daemonize yoleaux run
+      $ screen yoleaux run
+      $ nohup yoleaux run &
+    
+    To combine daemonization and logging, run yoleaux under an extra
+    shell instance:
+      $ daemonize sh -c 'yoleaux run > yoleaux.log'
+
+EOF
+
+case dowhat
+when 'create'
+  name = "yoleaux-#{rand(1000)}"
+  config = {
+    'server'   => 'irc.freenode.net',
+    'port'     => 6667,
+    'nick'     => name,
+    'user'     => 'yoleaux',
+    'realname' => 'Yoleaux L. Only-Once',
+    'prefix'   => '.',
+    'channels' => ['#yoleaux-test'],
+    'admins'   => ['johnsmith'],
+    'workers'  => 4,
+    'command_timeout' => 30,
+  }
+  File.write "#{base}/config.yaml", config.to_yaml
+  pid = fork do
+    exec *(ENV['EDITOR'].split(' ')), "#{base}/config.yaml"
+  end
+  Process.wait pid
+when 'run'
+  Yoleaux.new.start
+when 'help'
+  helponwhat = ARGV[1]
+  case helponwhat
+  when 'run'
+    puts <<-EOF
+yoleaux run
+
+Starts the bot, connects to an IRC server and runs as usual as specified
+in the configuration file. No options are taken; all configuration is
+done through the configuration file; for help with that, see the README.
+EOF
+  when 'create'
+    puts <<-EOF
+yoleaux create
+
+Prepare the bot's initial configuration, and open an editor to set it up
+with your own preferences. By default, the bot nick will have a nick of
+yoleaux-nnn, where n is a number, and it will join #yoleaux-test on
+Freenode, where you can try the bot out. However, to avoid triggering
+other bots that may be in that channel, you should change the prefix to
+something fairly non-obvious.
+EOF
+  end
+else
+  puts help
+end
+

@@ -1,0 +1,148 @@
+
+                                    /'
+                                  /'
+                       ____     /' ____     ____           .    ,
+            /'    /  /'    )--/' /'    )  /'    )  /'    /  \  /
+          /'    /' /'    /' /' /(___,/' /'    /' /'    /'    \'
+         (___,/(__(___,/'  (__(________(___,/(__(___,/(____/' \_ 
+            /'
+    /     /'
+   (___,/'
+
+Yoleaux is a brand spankin' new utilikilt-wearin' Internet Relay Chat
+robot for the internet. Yoleaux is written in Ruby, has a clean(-ish),
+modular(-ish) preforking architecture and is generally steamin' cool.
+
+     _______________________________
+    ( Sounds good. How do I use it? )
+     -------------------------------
+            o   ^__^
+             o  (oo)\_______
+                (__)\       )\/\
+                    ||----w |
+                    ||     ||
+
+Assuming that you've downloaded the bot, which can be done from this
+'ere link: <http://dpk.io/yoleaux.tar.gz> -- the process of installing
+it is actually quite simple. Having unpacked that archive, you should
+`cd` into the directory therein and type `./yoleaux create`, which will
+set up the initial configuration and pop open your favourite text editor
+on the configuration file. The configuration file is written in YAML, so
+it's easy to read and write. You will probably wish to change the bot's
+nick and add some channels for him to join. Some administrative commands
+are built into the bot which will edit the configuration file for you
+once the bot is running. See CONFIG for a list of all the things you can
+change in the configuration file.
+
+Having set things up just so in the config file, typing `./yoleaux run`
+will kick things off and get the bot running. Yoleaux always runs in the
+foreground; use an external script if you want to daemonise the bot.
+Likewise, logs cannot be printed anywhere other than standard-error; use
+a pipe to write them to a file.
+
+                               ____________________________
+                              ( No, but how do I *use* it? )
+                               ----------------------------
+                                               ^__^   o
+                                       _______/(oo)  o
+                                   \/\(       /(__)
+                                      | w----||                    
+                                      ||     ||
+
+Ah, I see. Yoleaux currently supports only a small subset of the
+commands it will hopefully someday support. Here's a quick overview of
+the most useful commands that work so far:
+
+    command       what in the heck it does
+
+    g             Searches Google
+    wik           Searches Wikipedia
+    wa            Queries Wolfram Alpha
+    c             Calculate with Google
+    title         Get the title of a link
+    in            Set a reminder for yourself
+    to/tell/ask   Send a message to someone when they're next available
+    u             Search for a Unicode character
+
+There's also a very nifty services system, whereby any user of the bot
+can add their own commands, provided that they don't trample on any
+existing command names.
+
+    <dpk> .add-command something http://example.com/service.cgi
+    <yoleaux> Added command something: oblique service. (Please add a
+              help string with ".command-help something ...")
+    <dpk> .something
+    <yoleaux> This is the output of the web service!
+
+The URL can be any valid oblique service URL:
+https://github.com/nslater/oblique
+
+    ____________________________________
+   ( Can I make commands elsewise, too? )
+    ------------------------------------
+           o   ^__^
+            o  (oo)\_______
+               (__)\       )\/\
+                   ||----w |
+                   ||     ||
+
+Yes! Commands are divided into 'command sets' or 'packages'. Think up a
+name for your package, say, xyzzy, and make a file in the commands
+directory called xyzzy. Put something like this in it:
+
+    command_set :xyzzy do
+      helpers do
+        def plugh
+          "Plugh!"
+        end
+      end
+      
+      command :do_something, 'This is the command help string' do
+        respond plugh
+      end
+    end
+
+You can look at the existing packages to see the sorts of things you can
+do with commands.
+
+                              ______________________________________ 
+                             ( What's the story of this 'ere robot? )
+                              -------------------------------------- 
+                                                       ^__^   o
+                                               _______/(oo)  o
+                                           \/\(       /(__)
+                                              | w----||                    
+                                              ||     ||
+
+Once there was a bot called Phenny. She was written in Python 2, she
+used threads all over the shop, and her creator was Sean B. Palmer, also
+known as sbp. Then, PYTHON3™ happened. sbp sent a decree through the
+land, "NIHIL FILUM TUTUM EST", and set to work on a PYTHON3™ version of
+Phenny. The new bot, the knight Duxlot, was much ador'd, but sbp was
+unhappy because, by his reckoning, his process-based architecture was
+just as bad as the thread-based architecture which Phenny had used. He
+cast them both off, declaring himself disgusted with them.
+
+David P. Kendal had an idea for how to resolve these issues. He made a
+bot called Fauxlot, which also used a process-based architecture, but in
+a very different way, which seemed not to exhibit those problems. He
+worked a little more on it, then, one day, the bot we know as Yoleaux
+popped out of his keyboard and into his computer.
+
+     ______________________________ 
+    ( Who made this thing, anyway? )
+     ------------------------------ 
+            o   ^__^
+             o  (oo)\_______
+                (__)\       )\/\
+                    ||----w |
+                    ||     ||
+
+Yoleaux was principally written by David Kendal. However, many parts
+where inspired by the sbpware which preceded it, and as such dpk owes
+a huge thanks to Sean B. Palmer: many of the commands are direct Ruby
+translations of sbp's original Python code for Phenny and Duxlot. dpk
+also owes Noah Slater a megathank for complaining at him about things
+which are broken / changed compared to Phenny and Duxlot, which he
+undoubtedly will do. Noah also inadvertently named the bot. I must also
+credit Matt Read and Mark E. Shoulson for helping me to debug.
