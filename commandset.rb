@@ -105,8 +105,8 @@ class Yoleaux
       @env.out.send Tell.new to, callback, args
     end
     
-    def db name
-      DatabaseProxy.new(name, @env.in, @env.out)
+    def db name, val={}
+      DatabaseProxy.new(name, val, @env.in, @env.out)
     end
     
     def normalize_command_name *a; self.class.normalize_command_name *a; end
@@ -166,10 +166,11 @@ class Yoleaux
     init
     
     class DatabaseProxy
-      def initialize name, inqueue, outqueue
+      def initialize name, val={}, inqueue, outqueue
         @name = name
         @inqueue = inqueue
         @outqueue = outqueue
+        action :init, val
       end
       
       def [] key

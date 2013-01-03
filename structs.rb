@@ -27,13 +27,7 @@ class Yoleaux
       @command_id = command_id
     end
   end
-  class Message
-    attr_reader :channel, :message
-    def initialize channel, message
-      @channel = channel
-      @message = message
-    end
-  end
+  class Message < Struct.new(:channel, :message); end
   class RawMessage < Struct.new(:command, :params, :text); end
   class CoreEval < Struct.new(:command_id, :code); end
   class ScheduledTask
