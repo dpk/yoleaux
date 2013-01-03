@@ -90,6 +90,13 @@ class Yoleaux
       message = message.gsub(/[\r\n]/, '').strip
       @env.out.send Message.new channel, message
     end
+    def raw_send command, params=[], text=nil
+      @env.out.send RawMessage.new command, params, text
+    end
+    def core_eval code
+      @env.out.send CoreEval.new(@env.command_id, code)
+      @env.in.receive
+    end
     
     def schedule time, callback, *args
       @env.out.send ScheduledTask.new time, nil, callback, args

@@ -25,12 +25,10 @@ class Yoleaux
   CHLDSIG = "\x02"
   
   def self.command_sets; @@command_sets; end
-  attr_accessor :admin_commands
   
   def initialize
     read_config
     @log = STDOUT
-    AdminCommands.load self
     # self-pipe
     @spr, @spw = IO.pipe
   end
@@ -85,20 +83,9 @@ class Yoleaux
             event = parse_line line
             handle_event event
             if command = parse_command(event)
-              if @admin_commands.has_command? command.command
-                command.started!
-                if @admins.include? command.user
-                  instance_exec command, &@admin_commands.commands[command.command]
-                else
-                  privmsg command.channel, "#{command.user}: Sorry, this command is admin-only."
-                end
-                command.done!
+              if @stopasap
+                privmsg command.channel, "#{command.user}: Sorry, I can't take any more commands because I'm about to quit."
               else
-                if @stopasap
-                  privmsg command.channel, "#{command.user}: Sorry, I can't take any more commands because I'm about to quit."
-                else
-                  dispatch_command command
-                end
               end
             end
           elsif r == @spr
@@ -178,6 +165,19 @@ class Yoleaux
               end
             when Message
               privmsg response.channel, response.message
+            when RawMessage
+              send response.command, response.params, response.text
+            when CoreEval
+              result = (proc do
+                command = @commands[response.command_id]
+                begin
+                  eval response.code
+                rescue Exception => e
+                  e
+                end
+              end).call
+              inqueue = (@workers.select {|w| w.outqueue == r }.first or next).inqueue
+              inqueue.send result
             when DatabaseAction
               inqueue = (@workers.select {|w| w.outqueue == r }.first or next).inqueue
               case response.action
@@ -453,16 +453,6 @@ class Yoleaux
     pid, stat = Process.wait2 @sender.pid
     @log.puts "sender (#{pid}) stopped: #{stat.exitstatus}"
     @sender = nil
-  end
-  
-  class AdminCommands
-    def self.load bot
-      bot.admin_commands = class_eval File.read "./commands/admin.rb"
-    end
-    
-    def self.command_set name, &block
-      Class.new(CommandSet, &block)
-    end
   end
 end
 
