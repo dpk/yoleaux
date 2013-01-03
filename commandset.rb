@@ -129,6 +129,10 @@ class Yoleaux
         @command_docs[normalize_command_name(from)] = @command_docs[normalize_command_name(to)]
       end
       
+      def command_list
+        @commands.keys
+      end
+      
       def callback name, &block
         @callbacks[name] = block
       end

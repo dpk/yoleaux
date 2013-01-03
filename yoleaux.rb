@@ -86,6 +86,7 @@ class Yoleaux
               if @stopasap
                 privmsg command.channel, "#{command.user}: Sorry, I can't take any more commands because I'm about to quit."
               else
+                dispatch_command command
               end
             end
           elsif r == @spr
@@ -326,6 +327,7 @@ class Yoleaux
   end
   
   def privmsg channel, msg
+    msg = msg.to_s
     # loop prevention. a mechanism like Delivered-To would be useful here, IRC!
     if @last_msgs.count([channel, msg]) > 4
       if @last_msgs.count([channel, '...']) > 2

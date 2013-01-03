@@ -122,6 +122,7 @@ class Yoleaux
       command = normalise_name command
       @@special_commands.include?(command) or @@commands.has_key?(command)
     end
+    def self.command_list; load_commands_list; @@special_commands+@@commands.keys; end
     def self.call env
       self.new(env).call
     end
