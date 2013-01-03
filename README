@@ -58,11 +58,11 @@ the most useful commands that work so far:
     g             Searches Google
     wik           Searches Wikipedia
     wa            Queries Wolfram Alpha
-    c             Calculate with Google
-    title         Get the title of a link
-    in            Set a reminder for yourself
-    to/tell/ask   Send a message to someone when they're next available
-    u             Search for a Unicode character
+    c             Calculates with Google
+    title         Gets the title of a link
+    in            Sets a reminder for you
+    to/tell/ask   Sends a message to someone when they're next available
+    u             Searches for a Unicode character
 
 There's also a very nifty services system, whereby any user of the bot
 can add their own commands, provided that they don't trample on any
