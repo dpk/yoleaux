@@ -1,0 +1,338 @@
+This file records my thoughts on various IRC- and Yoleaux-related
+issues; it does not explain them. Paragraphs are not organised except by
+section; the required background varies wildly from paragraph to
+paragraph. Take what you read with a pinch of salt.
+
+
+IRC generally:
+
+Per RFC 2812 §2.2, IRC treats "{}|^" and "[]\~" as equivalent in a
+case-insensitive comparison, such as when comparing two nicknames.
+Yoleaux does not (yet) respect this. (Fix: replace all instances of
+nick.downcase with a special function which does
+nick.downcase.tr('{}|^', '[]\~'))
+
+Phenny uses a hand-hacked parser for IRC lines; Yoleaux just uses a
+regexp, @@linere, which I pinched from loggy.py's source. This seems
+to work well enough: I haven't seen it trip up once yet. Though it
+may turn nasty the first time it does.
+
+Yoleaux's flood control allows a message to be sent immediately if no
+data has been sent for at least half a second and the data before that
+was sent no more than a second ago; otherwise messages are throttled to
+a rate of at most once every 1.5 seconds. This is probably too strict:
+acrobup seems to manage to send a lot more than that. For now, though,
+it's OK.
+
+Another problem with the current flood control is that it's not
+prioritised at all. There are two problems with this: if #a has 100
+messages queued then someone in #b issues a command, the poor chap in #b
+has to wait for all those hundreds of messages to be delivered before
+he'll see the answer to his command. The other issue is that you could
+cause the bot to ping-timeout like this. One possible solution would be
+to make PONGs unbuffered, but then there's a chance that PONGing could
+cause us to be booted for flooding, especially with some derpful IRC
+software which will remain nameless. (I don't know if this software
+actually behaves in this way, but it would not surprise me in the least.)
+
+Solution: PONGs and messages to different channels get to jump the
+queue: they get buffered like normal, but they go ahead of existing
+messages to other channels, so that those messages have to wait 3
+seconds or something.
+
+
+Encoding:
+
+Yoleaux converts all input strings to UTF-8 before processing them. All
+output is clean UTF-8 (or should be, anyway).
+
+Phenny tries UTF-8, then ISO-8859-1, then Windows-1252. This seems to be
+necessary because Python's ISO-8859-1-to-Unicode conversion is done by a
+table, rather than simply arithmetically as is Ruby's, and doesn't
+include conversions for every byte from 128 to 255. As Windows-1252 is
+backwards-compatible with ISO-8859-1 with a few additions, I initially
+tried UTF-8 then 1252; unfortunately, Ruby uses a table for Windows-1252
+conversion, and errors when it encounters a byte that's not in its
+table. ISO Latin-1 to UTF-8 conversion is done without regard to whether
+each byte is "valid" in the source encoding, and will work on a string
+containing any sequence of bytes. You can demonstrate this by running
+the following code:
+
+(0..255).each {|n| n.chr.force_encoding('iso-8859-1').encode('utf-8') }
+(0..255).each {|n| n.chr.force_encoding('cp1252').encode('utf-8') }
+
+Upshot of all this: Yoleaux tries UTF-8, and if the string is not valid,
+it treats it as ISO-8859-1 and transcodes. This could be a problem if
+someone uses a Windows-1252 character which doesn't transcode as they
+expect, and thus they pass some kind of input they didn't expect to a
+command. Given the increasing dominance of UTF-8, and the number of
+clients which only offer Latin-1, I don't think this issue is worth
+addressing.
+
+
+Commands, generally:
+
+Prefixing: need to support ``<bot nick>: prefix?'' queries; and
+channel-specific (eg. non-global) prefixes would be nice too.
+
+People keep pestering me to support the ``<bot nick>: tell <someone>
+<message>'' syntax from Phenny (and Monty before her). If people annoy
+me enough about this, I will add it. My desire to keep it as .tell is to
+keep the codebase clean and the syntax consistent, and (secondarily) to
+avoid sending messages to workers for every single line regardless of
+whether it's a command.
+
+Ideas for supporting this in a fairly generic way (so that other
+commands can use special invocation syntax like this): at worker
+load-time, each command-set gets to "syntax-alias" commands. These
+syntax-aliases are passed back to the main process, which allow eg.
+``yoleaux: tell'' to be 'rewritten' (as text) so that at command-time it
+looks nothing different from a usual call to .tell. Problems: the main
+process would receive n messages about the existence of these aliases
+for each one, where n is the number of workers. What about reloads? If
+the alias syntax has changed, the main process needs to be made aware of
+that. What if two command-sets try to grab the same syntax? One will
+'win', which is not too different from what happens when two packages
+try to get the same command name, except that the namespace-resolution
+syntax can be used specify which particular command by that name you
+want.
+
+Another solution: leave syntax aliasing to the bot's admin, stored
+perhaps in the config file as a dictionary like this:
+
+    aliases:
+       "{nick}: tell ${args}": "{prefix}tell ${args}"
+
+This solves the above problems, at the cost of command-set authors not
+being able to choose their own syntax; however, given the inherent
+problems of this, this is probably for the best. There can still be
+collisions, of course, but these are down to the bot owner to resolve.
+
+Another advantage of syntax-aliasing: you could potentially turn yoleaux
+into flyingferret <http://www.chiliahedron.com/ferret/> or something
+like it:
+
+    aliases:
+        "\x01ACTION rolls ${args}\x01": "{prefix}roll ${args}"
+        "{nick}: ${question}?": "{prefix}yes-or-no"
+      etc.
+
+Related to this is that the bot should support nick aliasing, which is
+to say that you should be able to add a nick which will not actually be
+the bot's nick, but which it will respond to if a syntax-alias (like
+``bot: tell ...'') or an event (``bot!'' / ``bot: ping?'' / etc)
+involves the bot's nickname. Use cases for this: For a potential future
+phenny-to-yoleaux transition, yoleaux-main should respond to ``phenny:
+tell'' as well as ``yoleaux: tell'', for muscle memory's sake;
+flyingferret also responds to `ferret'; it's fun.
+
+Even more powerful would be arbitrary regexps for aliasing; but then how
+would the aliases get to know the bot's nick / alias-nicks?
+
+How about channel-specific aliases for commands? So, for instance, the
+default name of a command could be .random-mlp-episode but in
+#reddit-mlp it could be called .randomep (which is a command in their
+current channel bot, Fluttershy.) Rationale: A channel about any other
+TV series would want .randomep to get an episode of that TV series, not
+MLP. Another #reddit-mlp inspired feature would be to attach hooks to
+the noted URL for the channel, so that various commands can do things
+when a URL is mentioned, like their clever auto-title thing for YouTube
+videos.
+
+
+Specific commands:
+
+"Dirty cloud" commands: .ety, .follows, .gc :site, .gcs :site, .w/.d,
+.wa. These commands all scrape raw HTML, and are likely to break without
+warning.
+
+"Semi-dirty cloud" commands: .c, .g, .tr, .wik. These commands don't
+scrape HTML, but they use unofficial APIs or ones which I suspect could
+change or go away without much notice. For instance, .g scrapes the
+Location header of a Google search; .tr scrapes the AJAX response of a
+translation request.
+
+"Clean cloud" commands: .head, .npl, .title, .tw. These are depressingly
+few. Just because they are 'clean cloud' doesn't make them any less
+prone to breakage, either: I foresee .tw breaking in the near future as
+Twitter makes more changes to its API as part of its ongoing drive
+against everything that once made it good.
+
+.u in Phenny and Duxlot uses a pickled UnicodeData object, loaded into
+memory; .u in Yoleaux, on the other hand, literally greps over a copy of
+the original UnicodeData.txt file. It also always outputs characters in
+ascending order of codepoint, so for instance sometimes a combiner will
+appear in the list before the character it combines with. (The same
+applies to .chars)
+
+.wa scrapes JavaScript source code and extracts JSON. This is perhaps
+the worst scraper in the whole of Yoleaux, and I suspect it will be the
+first to break. It also parses the HTML of the WA response in order to
+extract the title for each pod in the response, something Phenny and
+Duxlot weren't able to do.
+
+.npl uses binary floating-point arithmetic, instead of decimals as
+Duxlot and Phenny used. Thus, its representation of sub-second values is
+probably slightly out. I can't work out how to get a DateTime object to
+accept a BigDecimal value without truncating it, though.
+
+.wik makes three HTTP requests for every query: once to Google, once to
+get the article category list to see if it's a disambiguation page, and
+once to get the HTML source of the first section, using the Wikipedia
+mobile view API. That's more than any other command, and it'd be nice to
+cut it down. (Can the last two be combined into one somehow?)
+
+When .w breaks the first time, I'll switch it to Wiktionary.
+
+We have .core-eval now. While it is cute, it's a dangerous toy: if
+someone manages to get hold of an admin's nick, they can run arbitrary
+code as the OS user the bot runs as. Solution: either don't have
+.core-eval, which would make debugging significantly less fun; or allow
+the bot to start as root then immediately setuid to an unprivileged
+user. Still not completely secure, but far better.
+
+
+Callbacks:
+
+Tells should always be sent in order. Right now they go in whatever
+order they end up in when the callbacks are dispatched. Solution:
+maintain a queue of callbacks/commands, so that we can say: "When
+command <id> is done, immediately dispatch this command, then when
+that's done, dispatch this command, etc." so that Tells can be ordered
+appropriately. (This also presents the opportunity to make commands by
+the same user FIFO, if desired!)
+
+The callback dispatch mechanism is a hack that needs serious work:
+Callbacks need to be namespaced, for a start. Callbacks should still
+piggy-back on the command dispatch mechanism, though. I need to look
+into the interface for command dispatch, too: the Command class should
+really be an OpenStruct. So when I've done that, I can design a Callback
+class which implements enough of the same API as to be usable by the
+same dispatch_command method, and so on.
+
+What happens when callback argument lists change? Right now you're bound
+to supporting your old callbacks forever, in case there's one that
+hasn't triggered yet ...
+
+
+Services:
+
+The services module has priority 2, meaning that (for example) if you
+define a command called 'title' as a service, it won't override the
+'title' in the api package (which has priority 1), and you'll have to
+use 'services.title' in order to invoke it.
+
+Need to check error conditions (non-200 responses, non-text responses,
+multi-line responses) for services.
+
+Need to report "Bad service format" at .add-command time, rather than
+waiting for someone to try using it.
+
+Need to support the old .o syntax from Phenny, probably with a
+sufficiently non-noisy deprecation notice. (Perhaps just prepend
+something like "(note: .o is deprecated; use .<service>)"?)
+
+Should support importing the old oblique command schema. The format,
+though, is mal-designed, and requires HTML scraping. A simple line-based
+text format, which "<name> <url>" on each line would have been far
+better for this purpose.
+
+The services package is full of race conditions. See the section on
+Databases below.
+
+
+Databases:
+
+I originally envisioned databases as just being marshaled objects of any
+kind, stored on disk. Advantage being that it's quite flexible in terms
+of what you can do with it. But you have to load the object into memory
+before you can do anything with it. It turns out that I'm not using them
+for anything other than a key-value store, except in the scheduler,
+which already has its own special database code anyway. So you have to
+load all the keys and values from disk into memory before you can access
+the value associated with a single key. This is inefficient, and it will
+only get more so as the bot gets older and databases like the seen-db
+get larger.
+
+Solution: switch to cdb. <http://cr.yp.to/cdb.html> There are several
+implementations for Ruby. The keys are just strings; the values are
+marshaled objects, as they always have been. Problem: requires migration
+from the old database format, since it's already 'in production', so to
+speak. This is not too tricky.
+
+You can't do anything non-trivial with a database without involving a
+risk of race conditions when another worker does something to the same
+database simultaneously. Solution: mutexes, using POSIX semaphores. I
+could make the main process do this, or make another 'semaphore server'
+process which would control access, but this would be tricky to get
+right. It could be worth it, though, if POSIX semaphores are as
+poorly-implemented as they seem to be at first glance on OS X and
+FreeBSD.
+
+How to use POSIX semaphores: before accessing the DB, open a semaphore
+by the name of ``/yoleaux/db/<db-name>'' and wait on it. Then do what
+you need to do and finally post to the semaphore.
+
+Simple reads don't need a semaphore, because database rewrites are
+atomic. Read-then-writes do, for obvious reasons. Solution:
+db(:xyzzy).transaction {|xyzzy| ... }, which holds the mutex for the
+entire block and ensures its release at the end.
+
+The services module is already race-condition--prone. Worst case there,
+you have to type a special command more than once to get it to work.
+cdb + DB transactions would fix this. (Neither without the other.)
+
+The alternative to all this is SQLite, which is overkill.
+
+
+Big projects:
+
+While I don't think Yoleaux would ever be a GSoC project, here are the
+sorts of things I would submit as proposals if I were going to make it
+one (that is, projects which (a): have specific, attainable, desirable
+goals which leave enough room for design invention by the person who
+takes on the project; (b): involve a lot of work; and (c): I have no
+intention of doing myself):
+
+Allow Yoleaux to speak protocols other than IRC, using a 'protocol
+handler' mechanism like Hubot's. I pestered sbp to support this in
+Duxlot, but he resisted. Irony of ironies, I didn't support this in
+Yoleaux either, and now the IRC-speaking code is all tangled up in the
+process-management code, just like it was for Duxlot. There are a number
+of challenges associated with doing this, which are responsible for sbp
+being put off doing it in Duxlot. They are out of the scope of this
+document but if someone wished to attempt this, I would be happy to
+discuss these problems with them
+
+A web interface to Yoleaux configuration. Ideally one could tack this on
+to `yoleaux create' in such a way that it would pop open your web
+browser on a form that would allow you to configure the bot. Such a
+thing should be a self-contained Sinatra (or similar) app, in one file,
+not involving any external assets.
+
+
+Miscellaneous:
+
+Everything can be filed under "Miscellaneous". -- George Bernard Shaw
+
+The seen-db needs some privacy options. Already I've seen one case where
+someone said something off-the-record which yoleaux happily regurgitated
+when asked when he had .seen that person. Need to maintain a list of
+mappings between channels and the prefixes that mark things said in them
+as ``off-the-record'', for instance ``[off]'' for Swhack. Also need to
+think of a way for for channels to mark the 'level' of suck privacy
+features: eg. are they happy for yoleaux to acknowledge in .seen that
+someone was speaking in a particular channel, but not to reveal what
+they said? Or do they want speech in that channel to not be recorded in
+the seen-db at all?
+
+The existence of this file is inspired by djb's THOUGHTS file from qmail.
+Would that Yoleaux were such a piece of artistry!
+
+If Phenny is a fair maiden, and Duxlot is a brave knight, what is
+Yoleaux? My initial thought, which is completely irrelevant to the
+existing theme of mediæval ideas: Yoleaux is a cool French teenager who
+lives in the suburbs of Paris and drives a white Peugeot, constantly
+playing rock music (whose lyrics are English, which he does not
+understand) far too loud through its stereo.
+
