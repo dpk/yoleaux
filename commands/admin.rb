@@ -64,7 +64,7 @@ command_set :admin do
       @reloading = OpenStruct.new :started => Time.now, :channel => command.channel, :old_workers => @workers.dup, :reloader => command.user
       stop_workers
       true
-	EOF
+    EOF
   end
   
   command :core_eval, 'Evaluate some Ruby code in the bot core' do
