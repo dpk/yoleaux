@@ -84,8 +84,6 @@ class Yoleaux
         end
         if @@commands.has_key? command
           run_command @@commands[command], prepend
-        else
-          raise 'no such service is available'
         end
       end
     end
