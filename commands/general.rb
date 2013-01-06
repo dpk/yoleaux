@@ -135,6 +135,6 @@ command_set :general do
     end
   end
   
-  command(:o, ':O') { respond ':O' }
+  # command(:o, ':O') { respond ':O' }
 end
 

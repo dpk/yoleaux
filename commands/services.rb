@@ -17,7 +17,7 @@ require 'securerandom'
 
 class Yoleaux
   class ServiceCommands
-    @@special_commands = %w{add-command del-command command-help}
+    @@special_commands = %w{add-command del-command command-help o}
     @@commands = {}
     
     def initialize env
@@ -76,19 +76,25 @@ class Yoleaux
           respond "#{@env.nick}: Sorry, that command doesn't seem to exist!"
         end
       else
+        prepend = ''
+        if command == 'o'
+          command, args = @env.args.to_s.split(' ', 2)
+          @env.args = args
+          prepend = "(#{@env.prefix}o is deprecated; use #{@env.prefix}#{command}) "
+        end
         if @@commands.has_key? command
-          run_command @@commands[command]
+          run_command @@commands[command], prepend
         else
           raise 'no such service is available'
         end
       end
     end
     
-    def run_command command
+    def run_command command, prepend=''
       # todo: better error reportage
       case command[:type]
       when 'oblique'
-        response = Net::HTTP.get URI(command[:uri].gsub(/\$\{(?:nick|args|sender)\}/i) do |m|
+        resp = Net::HTTP.get_response URI(command[:uri].gsub(/\$\{(?:nick|args|sender)\}/i) do |m|
           if m.downcase.include? 'nick'
             URI.encode(@env.nick, /./)
           elsif m.downcase.include? 'args'
@@ -97,16 +103,22 @@ class Yoleaux
             URI.encode(@env.channel, /./)
           end
         end)
-        respond response
-      when 'yoleaux'
-        query = {nick: @env.nick,
-                 channel: @env.channel,
-                 prefix: @env.prefix,
-                 name: normalise_name(@env.command),
-                 args: @env.args.to_s,
-                 last_url: @env.last_url}
-        response = Net::HTTP.get URI(command[:uri]+'?'+URI.encode_www_form(query))
-        respond response
+        if not resp['Content-Type'].downcase.include? 'text/plain'
+          return respond "#{@env.nick}: Sorry: that command is a web-service, but it didn't respond in plain text."
+        elsif (lines=resp.body.lines.to_a).length > 1 or lines.first.bytesize > (500-prepend.bytesize)
+          return respond "#{@env.nick}: Sorry: that command is a web-service, but its response was too long."
+        else
+          respond "#{prepend}#{lines.first}"
+        end
+#       when 'yoleaux'
+#         query = {nick: @env.nick,
+#                  channel: @env.channel,
+#                  prefix: @env.prefix,
+#                  name: normalise_name(@env.command),
+#                  args: @env.args.to_s,
+#                  last_url: @env.last_url}
+#         response = Net::HTTP.get URI(command[:uri]+'?'+URI.encode_www_form(query))
+#         respond response
       else
         respond "#{@env.nick}: ?"
       end
@@ -122,6 +134,7 @@ class Yoleaux
       command = normalise_name command
       @@special_commands.include?(command) or @@commands.has_key?(command)
     end
+    def self.has_callback? *a; false; end
     def self.command_list; load_commands_list; @@special_commands+@@commands.keys; end
     def self.call env
       self.new(env).call
@@ -131,6 +144,17 @@ class Yoleaux
       command = normalise_name command
       if @@commands[command]
         @@commands[command][:help]
+      elsif @@special_commands.include? command
+        case command
+        when 'add-command'
+          'Add a command of your own creation as a web service'
+        when 'command-help'
+          'Add help to a web-service command'
+        when 'del-command'
+          'Delete a web-service command'
+        when 'o'
+          '(Deprecated) Call a web-service command'
+        end
       else
         nil
       end
