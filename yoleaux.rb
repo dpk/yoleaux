@@ -29,6 +29,7 @@ class Yoleaux
   def initialize
     read_config
     @log = STDOUT
+    @log.sync = true if @log.respond_to? :sync=
     # self-pipe
     @spr, @spw = IO.pipe
   end
@@ -43,6 +44,7 @@ class Yoleaux
     send 'NICK', [], @nick
     send 'USER', [@user, '0', '*'], @realname
     
+    @next_dispatch = Hash.new { Array.new }
     @last_url = {}
     @seendb = Database.new :seen, {}
     @telldb = Database.new :tell, {}
@@ -121,10 +123,10 @@ class Yoleaux
                   @log.puts "restarting crashed worker #{pid} ..."
                   start_worker
                   @commands.each do |id, comm|
-                    # there's some kind of race condition-y heisenbug here (bug: reloadcrash), which is why we check that there is a handler before comparing pids
+                    # there's some kind of race condition-y heisenbug here, which is why we check that there is a handler before comparing pids
                     if comm.handler_process and comm.handler_process.pid == pid
                       if comm.started? and not comm.done?
-                        privmsg comm.channel, "#{comm.user}: Sorry, that command (#@prefix#{comm.command}) crashed."
+                        privmsg comm.channel, "#{comm.user}: Sorry, that command (#@prefix#{comm.name}) crashed." unless comm.is_a? Callback
                         comm.done!
                       elsif not comm.started?
                         dispatch_command comm
@@ -142,9 +144,10 @@ class Yoleaux
             end
             case task
             when ScheduledTask
-              cbcomm = Command.new(@command_ctr += 1, "\x01#{task.callback}", task.args, nil, nil)
-              @commands[cbcomm.id] = cbcomm
-              dispatch_command cbcomm
+              callback = Callback.new (@command_ctr += 1), :name => task.callback,
+                                                           :args => task.args
+              @commands[callback.id] = callback
+              dispatch callback
             end
           elsif @sender and r == @sender.outqueue
             begin
@@ -163,6 +166,12 @@ class Yoleaux
                 command.started!
               else response.status == :done
                 command.done!
+                if not @next_dispatch[response.command_id].empty?
+                  nxt = @next_dispatch[response.command_id].shift
+                  @next_dispatch[nxt.id] = @next_dispatch[response.command_id]
+                  @next_dispatch[response.command_id] = []
+                  dispatch nxt
+                end
               end
             when Message
               privmsg response.channel, response.message
@@ -217,6 +226,8 @@ class Yoleaux
             @commands.delete id
           end
         end
+        # prevent the queue from memory-leaking
+        @next_dispatch.each {|id, queue| @next_dispatch.delete(id) if queue.empty? }
         @sent_times = @sent_times[0..3]
         @last_msgs = @last_msgs[0..10]
       end
@@ -244,6 +255,8 @@ class Yoleaux
         running = @commands.count {|id, command| command.started? and not command.done? }
         queued = @commands.count {|id, command| not command.started? }
         privmsg channel, "#{event.nick}: pong! (#{queued} queued, #{running} running)"
+      elsif event.text.match(/^#{Regexp.quote @nick}[,:] prefix\??$/i)
+        privmsg channel, "#{event.nick}: My current prefix is \"#@prefix\"."
       elsif m=event.text.match(@@uri_regexp)
         @last_url[channel] = m[1]
       end
@@ -251,11 +264,15 @@ class Yoleaux
       @seendb[event.nick.downcase] = [DateTime.now, event.nick, channel, event.text]
       if @telldb[event.nick.downcase] and not @telldb[event.nick.downcase].empty?
         begin
-          @telldb[event.nick.downcase].each do |tell|
-            cbcomm = Command.new(@command_ctr+=1, "\x01#{tell.callback}", tell.args, event.nick, channel)
-            @commands[cbcomm.id] = cbcomm
-            dispatch_command cbcomm
+          # a hack to get tells to be delivered in order
+          tellcbs = @telldb[event.nick.downcase].map do |tell|
+            dispatchable Callback, :name => tell.callback,
+                                   :args => tell.args,
+                                   :user => event.nick,
+                                   :channel => channel
           end
+          @next_dispatch[tellcbs.first.id] = tellcbs[1..-1]
+          dispatch tellcbs.first
         ensure
           @telldb[event.nick.downcase] = []
         end
@@ -268,13 +285,20 @@ class Yoleaux
   end
   
   def parse_command event
-    if event.type == 'PRIVMSG' and event.text[0...(@prefix.length)] == @prefix
+    if event.type == 'PRIVMSG' and
+       event.text[0...(@prefix.length)] == @prefix and
+       event.text[@prefix.length].to_s.match(/\A[a-z0-9]\Z/i)
       command, args = event.text.split(' ', 2)
       command = command[(@prefix.length)..-1]
       channel = (event.args[0] == @nick ? event.nick : event.args[0])
-      id = (@command_ctr += 1)
-      @commands[id] = Command.new(id, command, args, event.nick, channel, {:last_url => @last_url[channel], :admin => @admins.include?(event.nick), :prefix => @prefix, :bot_nick => @nick})
-      return @commands[id]
+      dispatchable Command, :name => command,
+                            :args => args,
+                            :user => event.nick,
+                            :channel => channel,
+                            :last_url => @last_url[channel],
+                            :admin => @admins.include?(event.nick),
+                            :prefix => @prefix,
+                            :bot_nick => @nick
     end
   end
   
@@ -284,6 +308,13 @@ class Yoleaux
     command.handler_process = nil # if we're re-dispatching this command, don't dump IOs
     process.inqueue.send command
     command.handler_process = process
+  end
+  alias dispatch dispatch_command
+  
+  def dispatchable klass, other
+    id = (@command_ctr += 1)
+    obj = klass.new id, other
+    @commands[id] = obj
   end
   
   def read_config
@@ -359,7 +390,7 @@ class Yoleaux
   end
   
   def deal_with_runaway command
-    @log.puts "**RUNAWAY COMMAND!** #{command.command} for #{command.user} on #{command.channel} in process #{command.handler_process.pid}"
+    @log.puts "**RUNAWAY COMMAND!** #{command.name} for #{command.user} on #{command.channel} in process #{command.handler_process.pid}"
     command.done!
     movecomms = []
     @commands.each do |id, oc|
@@ -369,7 +400,7 @@ class Yoleaux
     end
     @log.puts "#{movecomms.length} queued command(s) need moving to another worker."
     
-    privmsg command.channel, "#{command.user}: Sorry, that command (#@prefix#{command.command}) took too long to process."
+    privmsg command.channel, "#{command.user}: Sorry, that command (#@prefix#{command.name}) took too long to process." unless command.is_a? Callback
     command.handler_process.kill
     ::Process.wait2 command.handler_process.pid
     @workers.delete command.handler_process

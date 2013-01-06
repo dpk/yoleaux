@@ -3,23 +3,21 @@
 # most of these could be replaced by Structs
 
 class Yoleaux
-  class Command
-    attr_accessor :id, :command, :args, :user, :channel, :handler_process, :started, :extra
-    def initialize id, command, args, user, channel, extra={}
-      @id = id
-      @command = command
-      @args = args
-      @user = user
-      @channel = channel
-      @extra = extra
-      @done = false
+  class Dispatchable < OpenStruct
+    def initialize id, other
+      super({:id => id, :done => false, :started => nil, :handler_process => nil}.merge(other))
     end
     
-    def started?; not not @started; end
-    def started!; @started = Time.now; end
-    def done?; @done; end
-    def done!; @done = true; end
+    def started?; not not self.started; end
+    def started!; self.started = Time.now; end
+    def done?; self.done; end
+    def done!; self.done = true; end
   end
+  class Command < Dispatchable
+  end
+  class Callback < Dispatchable
+  end
+  
   class CommandStatus
     attr_reader :status, :command_id
     def initialize status, command_id

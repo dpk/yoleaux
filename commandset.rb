@@ -15,12 +15,12 @@ class Yoleaux
     attr_reader :env
     def call env
       @env = env
-      command = env.command
-      if command[0] == "\x01"
-        cbname = command[1..-1].to_sym
-        callback = @callbacks[cbname]
+      if env.respond_to? :callback
+        callback = @callbacks[env.callback]
+        (puts "no such callback #{env.callback} ..."; return) if not callback # callback must be obsolete
         instance_exec *(@env.args), &callback
-      else
+      elsif env.respond_to? :command
+        command = env.command
         until command.is_a? Proc or command.nil?
           command = @commands[command]
         end
@@ -99,10 +99,10 @@ class Yoleaux
     end
     
     def schedule time, callback, *args
-      @env.out.send ScheduledTask.new time, nil, callback, args
+      @env.out.send ScheduledTask.new time, nil, [@@name, callback], args
     end
     def on_next_message to, callback, *args
-      @env.out.send Tell.new to, callback, args
+      @env.out.send Tell.new to, [@@name, callback], args
     end
     
     def db name, val={}
@@ -163,6 +163,9 @@ class Yoleaux
       end
     end
     
+    def self.name= name; @@name = name; end
+    def self.name; @@name; end
+    
     init
     
     class DatabaseProxy
@@ -197,7 +200,9 @@ class Yoleaux
   
   module CommandSetHelper
     def command_set name, &block
-      Yoleaux.command_sets << [name, Class.new(CommandSet, &block)]
+      pkg = Class.new(CommandSet, &block)
+      pkg.name = name
+      Yoleaux.command_sets << [name, pkg]
     end
   end
   
