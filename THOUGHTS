@@ -189,26 +189,12 @@ someone manages to get hold of an admin's nick, they can run arbitrary
 code as the OS user the bot runs as. Solution: either don't have
 .core-eval, which would make debugging significantly less fun; or allow
 the bot to start as root then immediately setuid to an unprivileged
-user. Still not completely secure, but far better.
+user. Still not completely secure, but far better. (sbp also suggests
+making the but run as a Unix socket server that can be used to send
+commands in. Not a bad idea ...)
 
 
 Callbacks:
-
-Tells should always be sent in order. Right now they go in whatever
-order they end up in when the callbacks are dispatched. Solution:
-maintain a queue of callbacks/commands, so that we can say: "When
-command <id> is done, immediately dispatch this command, then when
-that's done, dispatch this command, etc." so that Tells can be ordered
-appropriately. (This also presents the opportunity to make commands by
-the same user FIFO, if desired!)
-
-The callback dispatch mechanism is a hack that needs serious work:
-Callbacks need to be namespaced, for a start. Callbacks should still
-piggy-back on the command dispatch mechanism, though. I need to look
-into the interface for command dispatch, too: the Command class should
-really be an OpenStruct. So when I've done that, I can design a Callback
-class which implements enough of the same API as to be usable by the
-same dispatch_command method, and so on.
 
 What happens when callback argument lists change? Right now you're bound
 to supporting your old callbacks forever, in case there's one that
@@ -221,9 +207,6 @@ The services module has priority 2, meaning that (for example) if you
 define a command called 'title' as a service, it won't override the
 'title' in the api package (which has priority 1), and you'll have to
 use 'services.title' in order to invoke it.
-
-Need to check error conditions (non-200 responses, non-text responses,
-multi-line responses) for services.
 
 Need to report "Bad service format" at .add-command time, rather than
 waiting for someone to try using it.
