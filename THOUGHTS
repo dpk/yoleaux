@@ -190,7 +190,7 @@ code as the OS user the bot runs as. Solution: either don't have
 .core-eval, which would make debugging significantly less fun; or allow
 the bot to start as root then immediately setuid to an unprivileged
 user. Still not completely secure, but far better. (sbp also suggests
-making the but run as a Unix socket server that can be used to send
+making the bot run as a Unix socket server that can be used to send
 commands in. Not a bad idea ...)
 
 
@@ -210,10 +210,6 @@ use 'services.title' in order to invoke it.
 
 Need to report "Bad service format" at .add-command time, rather than
 waiting for someone to try using it.
-
-Need to support the old .o syntax from Phenny, probably with a
-sufficiently non-noisy deprecation notice. (Perhaps just prepend
-something like "(note: .o is deprecated; use .<service>)"?)
 
 Should support importing the old oblique command schema. The format,
 though, is mal-designed, and requires HTML scraping. A simple line-based
@@ -297,17 +293,6 @@ not involving any external assets.
 Miscellaneous:
 
 Everything can be filed under "Miscellaneous". -- George Bernard Shaw
-
-The seen-db needs some privacy options. Already I've seen one case where
-someone said something off-the-record which yoleaux happily regurgitated
-when asked when he had .seen that person. Need to maintain a list of
-mappings between channels and the prefixes that mark things said in them
-as ``off-the-record'', for instance ``[off]'' for Swhack. Also need to
-think of a way for for channels to mark the 'level' of suck privacy
-features: eg. are they happy for yoleaux to acknowledge in .seen that
-someone was speaking in a particular channel, but not to reveal what
-they said? Or do they want speech in that channel to not be recorded in
-the seen-db at all?
 
 The existence of this file is inspired by djb's THOUGHTS file from qmail.
 Would that Yoleaux were such a piece of artistry!

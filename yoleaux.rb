@@ -181,7 +181,8 @@ class Yoleaux
               result = (proc do
                 command = @commands[response.command_id]
                 begin
-                  eval response.code
+                  assignments = response.vars.map {|k, v| "#{k} = response.vars[:#{k}];\n" }.join
+                  eval "#{assignments}#{response.code}"
                 rescue Exception => e
                   e
                 end
@@ -261,7 +262,11 @@ class Yoleaux
         @last_url[channel] = m[1]
       end
       
-      @seendb[event.nick.downcase] = [DateTime.now, event.nick, channel, event.text]
+      if not private_msg? channel, event.nick, event.text
+        @seendb[event.nick.downcase] = [DateTime.now, event.nick, channel, event.text]
+      elsif time_loggable? channel
+        @seendb[event.nick.downcase] = [DateTime.now, event.nick, channel]
+      end
       if @telldb[event.nick.downcase] and not @telldb[event.nick.downcase].empty?
         begin
           # a hack to get tells to be delivered in order
@@ -329,6 +334,7 @@ class Yoleaux
     @channels = (@config['channels'] or [])
     @timeout = (@config['command_timeout'] or 30)
     @admins = (@config['admins'] or [])
+    @privacy = (@config['privacy'] or {})
   end
   def write_config
     @config['server'] = @server
@@ -341,7 +347,28 @@ class Yoleaux
     @config['channels'] = @channels
     @config['command_timeout'] = @timeout
     @config['admins'] = @admins
+    @config['privacy'] = @privacy
     File.write "#{Yoleaux::BASE}/config.yaml", @config.to_yaml
+  end
+  
+  def private_msg? channel, nick, msg
+    if channel == nick
+      true
+    elsif @privacy.has_key? channel
+      privopt = @privacy[channel]
+      if privopt['private'] or
+        (privopt['noseen_prefix'] and
+           msg[0...(privopt['noseen_prefix'].length)] == privopt['noseen_prefix'])
+        true
+      else
+        false
+       end
+    else
+      false
+    end
+  end
+  def time_loggable? channel
+    not not (@privacy.has_key? channel and @privacy[channel]['noseen_log_time'])
   end
   
   private

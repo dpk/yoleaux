@@ -88,6 +88,7 @@ class Yoleaux
                                :last_url => command.last_url,
                                :admin => command.admin,
                                :prefix => command.prefix,
+                               :bot_nick => command.bot_nick,
                                :out => @outqueue,
                                :in => @inqueue,
                                :channel => command.channel,

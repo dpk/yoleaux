@@ -27,7 +27,7 @@ class Yoleaux
   end
   class Message < Struct.new(:channel, :message); end
   class RawMessage < Struct.new(:command, :params, :text); end
-  class CoreEval < Struct.new(:command_id, :code); end
+  class CoreEval < Struct.new(:command_id, :code, :vars); end
   class ScheduledTask
     attr_reader :time, :command_set, :callback, :args
     def initialize time, command_set, callback, args

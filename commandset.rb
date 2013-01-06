@@ -93,8 +93,8 @@ class Yoleaux
     def raw_send command, params=[], text=nil
       @env.out.send RawMessage.new command, params, text
     end
-    def core_eval code
-      @env.out.send CoreEval.new(@env.command_id, code)
+    def core_eval vars={}, code
+      @env.out.send CoreEval.new(@env.command_id, code, vars)
       @env.in.receive
     end
     

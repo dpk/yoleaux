@@ -94,12 +94,16 @@ command_set :general do
       respond "I haven't seen #{argstr} around."
     else
       time, nick, channel, message = seen
-      if m=message.match(/\A\x01ACTION (.*)\x01\Z/)
-        message = "* #{nick} #{m[1]}"
-      else
-        message = "<#{nick}> #{message}"
-      end
-      respond "I saw #{nick} #{format_time time} in #{channel}: #{message}"
+      if message
+		if m=message.match(/\A\x01ACTION (.*)\x01\Z/)
+		  message = ": * #{nick} #{m[1]}"
+		else
+		  message = ": <#{nick}> #{message}"
+		end
+	  else
+	    message = '.'
+	  end
+      respond "I saw #{nick} #{format_time time} in #{channel}#{message}"
     end
   end
   
