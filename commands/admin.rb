@@ -84,7 +84,7 @@ command_set :admin do
     end
     log_time = (not %w{pr priv private pa para paranoid}.include? switches.first)
     privopt = core_eval ({:channel => channel, :prefix => prefix, :log_time => log_time}), <<-EOF
-      @privacy[channel] = {} if @privacy.has_key? channel
+      @privacy[channel] = {} if not @privacy.has_key? channel
       if prefix.nil? or prefix.empty?
         @privacy[channel].delete 'noseen_prefix'
         @privacy[channel].delete 'noseen_log_time'
