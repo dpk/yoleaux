@@ -54,7 +54,7 @@ command_set :general do
   command :msg, 'Send a message to a channel' do
     admin_only
     require_argstr
-    channel, message = argstr.split ' '
+    channel, message = argstr.split ' ', 2
     send channel, message
   end
   
