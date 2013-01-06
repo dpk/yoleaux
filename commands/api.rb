@@ -87,7 +87,6 @@ command_set :api do
       entities['urls'].each do |url|
         text[url['indices'][0]..url['indices'][1]] = url['expanded_url']
       end
-      text.gsub!('pic.twitter.com/', 'http://pic.twitter.com/')
       text
     end
     
