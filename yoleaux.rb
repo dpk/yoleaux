@@ -174,7 +174,11 @@ class Yoleaux
                 end
               end
             when Message
-              privmsg response.channel, response.message
+              command = @commands.values.select do |cmd|
+                cmd.started? and not cmd.done? and cmd.handler_process.outqueue == r
+              end.first
+              resp_prefix = (command.respond_to?(:response_prefix) ? command.response_prefix : nil)
+              privmsg response.channel, command.response_prefix, response.message
             when RawMessage
               send response.command, response.params, response.text
             when CoreEval
@@ -290,20 +294,30 @@ class Yoleaux
   end
   
   def parse_command event
-    if event.type == 'PRIVMSG' and
-       event.text[0...(@prefix.length)] == @prefix and
-       event.text[@prefix.length].to_s.match(/\A[a-z0-9]\Z/i)
-      command, args = event.text.split(' ', 2)
-      command = command[(@prefix.length)..-1]
+    if event.type == 'PRIVMSG' 
       channel = (event.args[0] == @nick ? event.nick : event.args[0])
-      dispatchable Command, :name => command,
-                            :args => args,
-                            :user => event.nick,
-                            :channel => channel,
-                            :last_url => @last_url[channel],
-                            :admin => @admins.include?(event.nick),
-                            :prefix => @prefix,
-                            :bot_nick => @nick
+      message = event.text
+      response_prefix = nil
+      if @privacy[channel] and @privacy[channel]['noseen_prefix'] and
+         message[0...(@privacy[channel]['noseen_prefix'].length)] == @privacy[channel]['noseen_prefix']
+        response_prefix = @privacy[channel]['noseen_prefix']
+        message = message[@privacy[channel]['noseen_prefix'].length..-1].lstrip
+      end
+      
+      if message[0...(@prefix.length)] == @prefix and
+         message[@prefix.length].to_s.match(/\A[a-z0-9]\Z/i)
+        command, args = message.split(' ', 2)
+        command = command[(@prefix.length)..-1]
+        dispatchable Command, :name => command,
+                              :args => args,
+                              :user => event.nick,
+                              :channel => channel,
+                              :last_url => @last_url[channel],
+                              :admin => @admins.include?(event.nick),
+                              :prefix => @prefix,
+                              :bot_nick => @nick,
+                              :response_prefix => response_prefix
+      end
     end
   end
   
@@ -384,8 +398,8 @@ class Yoleaux
     end
   end
   
-  def privmsg channel, msg
-    msg = msg.to_s
+  def privmsg channel, prefix=nil, msg
+    msg = "#{"#{prefix} " if prefix}#{msg.to_s}"
     # loop prevention. a mechanism like Delivered-To would be useful here, IRC!
     if @last_msgs.count([channel, msg]) > 4
       if @last_msgs.count([channel, '...']) > 2
