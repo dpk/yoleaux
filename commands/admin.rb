@@ -105,11 +105,11 @@ command_set :admin do
   command :privacy, 'Find out what privacy options are set in this channel' do
     privopt = core_eval({:channel => env.channel}, '@privacy[channel]')
     if not privopt or (not privopt['private'] and not privopt['noseen_prefix'])
-      respond "#{env.nick}: This channel is public: I will record the things you say and repeat them when I am asked when I last saw you."
+      respond "#{env.nick}: This channel is public. When I am asked when I last saw you, I may repeat things you say and what time it was when you said them."
     elsif privopt['private']
-      respond "#{env.nick}: This channel is private: I will not record anything you say in here, nor the times you have been active."
+      respond "#{env.nick}: This channel is private. I will not reveal anything you say in here, nor the times you have been active, to people who ask me when I last saw you."
     elsif privopt['noseen_prefix']
-      respond "#{env.nick}: This channel is public: If I am asked when I last saw you, I will repeat the last thing you said, but if you prefix lines with '#{privopt['noseen_prefix']}' then I will #{privopt['noseen_log_time'] ? 'only mention the time you last spoke' : 'not'}."
+      respond "#{env.nick}: This channel is public. If I'm asked when I last saw you, I may repeat things you said in here; however, I will never repeat things you say that start with '#{privopt['noseen_prefix']}', #{privopt['noseen_log_time'] ? 'but I will reveal what time it was when you said them' : 'nor will I remember what time it was when you said them'}."
     end
   end
   
