@@ -115,7 +115,11 @@ command_set :api do
       resp = http_get url
       followedcount = 0
       while resp['Location'] and followedcount <= 10
-        resp = http_get resp['Location']
+        location = resp['Location']
+        puri = URI(url) # 'parsed uri'
+        location = "#{puri.scheme}://#{puri.host}#{":#{puri.port}" if puri.port != puri.default_port}#{location}" if location[0] == '/'
+        url = location
+        resp = http_get url
         followedcount += 1
       end
       resp
