@@ -106,7 +106,10 @@ class Yoleaux
         elsif (lines=resp.body.lines.to_a).length > 1 or lines.first.bytesize > (500-prepend.bytesize)
           return respond "#{@env.nick}: Sorry: that command is a web-service, but its response was too long."
         else
-          respond "#{prepend}#{lines.first}"
+          response = "#{prepend}#{lines.first}"
+          response.force_encoding('utf-8')
+          response.force_encoding('iso-8859-1').encode!('utf-8') if not response.valid_encoding?
+          respond response
         end
 #       when 'yoleaux'
 #         query = {nick: @env.nick,
