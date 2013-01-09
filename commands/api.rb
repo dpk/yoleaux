@@ -16,7 +16,7 @@ command_set :api do
     def google_count query, kinds=[:site, :api]
       counts = {}
       if kinds.include? :site
-        uri = URI "http://www.google.com/search?&q=#{URI.encode(query)}"
+        uri = URI "http://www.google.com/search?&q=#{URI.encode(query)}&nfpr=1"
         http = Net::HTTP.new(uri.host)
         response = http.request_get(uri.path+'?'+uri.query, {'User-Agent' => 'Mozilla/5.0'})
         h = Nokogiri::HTML(response.body)
@@ -149,7 +149,8 @@ command_set :api do
             maxcp = $~[2].to_i(16)
             (mincp..maxcp).include? codepoint.to_i(16)
           when /\A[a-z0-9 \-]+\Z/i
-            name[0] != '<' and name.match(/\b#{Regexp.quote str.downcase}\b/i)
+            words = str.split(/\W+/).map(&:downcase)
+            name[0] != '<' and name.match(/#{words.map {|w| "\\b#{Regexp.quote w}\\w*?" }.join '\W'}/i)
           else
             str.include? ('' << codepoint.to_i(16))
           end)
@@ -287,7 +288,7 @@ command_set :api do
         json_src = Net::HTTP.get(URI("http://#{lang}.wikipedia.org/w/api.php?action=mobileview&page=#{article_slug}&format=json&sections=0"))
         html_src = JSON.parse(json_src)['mobileview']['sections'][0]['text']
         h = Nokogiri::HTML(html_src)
-        firstp = (h % 'p').inner_text.gsub(/\[\d+\]/, '')
+        firstp = (h % 'body > p').inner_text.gsub(/\[(?:(?:nb )\d+|citation needed)\]/, '')
         gist = ''
         sentences = firstp.split(/(?<=\. )/)
         if sentences.first.length > maxlen
