@@ -482,6 +482,20 @@ command_set :api do
     respond phrase
   end
   
+  command :news, 'Search for a recent news article' do
+    src = Net::HTTP.get URI("http://ajax.googleapis.com/ajax/services/search/news?q=#{URI.encode argstr}&v=1.0&safe=off")
+    result = JSON.parse src
+    if result.has_key? 'responseData' and
+       result['responseData'].has_key? 'results' and
+       not result['responseData']['results'].empty? and
+       result['responseData']['results'].first.has_key? 'unescapedUrl'
+      url = result['responseData']['results'].first['unescapedUrl']
+      respond "#{page_title url}: #{url}"
+    else
+      respond "#{env.nick}: Sorry, no news search result!"
+    end
+  end
+  
   command :npl, 'Get the current time from the National Physical Laboratory NTP servers' do
     reply = npl
     respond "#{reply.time.iso8601(6).sub('+00:00', 'Z')} \u2014 #{reply.server}"
