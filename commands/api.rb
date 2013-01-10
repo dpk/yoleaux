@@ -543,7 +543,7 @@ command_set :api do
     )
     
     text = expand_twitter_links tweet['text'], tweet['entities']
-    respond "#{text.gsub("\n", ' ').gsub(/[[:white:]]+/, ' ')} (@#{tweet['user']['screen_name']})"
+    respond "#{text.gsub("\n", ' ').gsub(/[[:space:]]+/, ' ')} (@#{tweet['user']['screen_name']})"
   end
   
   command :u, 'Search for a Unicode character by codepoint, name, or raw character' do
