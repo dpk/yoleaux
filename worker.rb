@@ -55,7 +55,7 @@ class Yoleaux
       when 'help'
         argstr = command.args.to_s.strip
         if argstr.empty?
-          @outqueue.send Message.new command.channel, "#{command.user}: I'm yoleaux. Type #{command.extra[:prefix]}commands to get a list of all the things I can do."
+          @outqueue.send Message.new command.channel, "#{command.user}: I'm yoleaux. Type #{command.prefix}commands to get a list of all the things I can do."
         elsif set = set_for(argstr) and help=set.help(cname(argstr))
           @outqueue.send Message.new command.channel, "#{help}"
         else
@@ -64,7 +64,7 @@ class Yoleaux
       when 'commands'
         argstr = command.args.to_s.strip
         if argstr.empty?
-          @outqueue.send Message.new command.channel, "Commands are divided into categories: #{Yoleaux.command_sets.map(&:first).join ', '}. Use #{command.extra[:prefix]}commands <category> to get a list of the commands in each."
+          @outqueue.send Message.new command.channel, "Commands are divided into categories: #{Yoleaux.command_sets.map(&:first).join ', '}. Use #{command.prefix}commands <category> to get a list of the commands in each."
         else
           set = nil
           Yoleaux.command_sets.sort {|a,b| b[1].priority <=> a[1].priority }.each do |s|
@@ -77,7 +77,7 @@ class Yoleaux
           if set.nil?
             @outqueue.send Message.new command.channel, "There's no category called #{argstr}."
           else
-            @outqueue.send Message.new command.channel, "Commands in #{argstr.downcase}: #{set.command_list.map(&:to_s).sort.join ', '}. Use .help to get information about them."
+            @outqueue.send Message.new command.channel, "Commands in #{argstr.downcase}: #{set.command_list.map(&:to_s).sort.join ', '}. Use #{command.prefix}help to get information about them."
           end
         end
       else
