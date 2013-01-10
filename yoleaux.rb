@@ -399,6 +399,7 @@ class Yoleaux
   end
   
   def privmsg channel, prefix=nil, msg
+    msg = fix_encoding msg
     msg = "#{"#{prefix} " if prefix}#{msg.to_s}"
     # loop prevention. a mechanism like Delivered-To would be useful here, IRC!
     if @last_msgs.count([channel, msg]) > 4
