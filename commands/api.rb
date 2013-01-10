@@ -471,6 +471,17 @@ command_set :api do
     end
   end
   
+  command :mangle, 'Put a phrase through the multiple-translation mangle' do
+    require_argstr
+    phrase = argstr
+    prevlang = 'en'
+    %w{la sr ta sw ht en}.each do |lang|
+      phrase = translate(prevlang, lang, phrase).translation
+      prevlang = lang
+    end
+    respond phrase
+  end
+  
   command :npl, 'Get the current time from the National Physical Laboratory NTP servers' do
     reply = npl
     respond "#{reply.time.iso8601(6).sub('+00:00', 'Z')} \u2014 #{reply.server}"
