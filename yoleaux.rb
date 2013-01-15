@@ -414,7 +414,40 @@ class Yoleaux
       @last_url[channel] = m[1]
     end
     @last_msgs.unshift [channel, msg]
-    send 'PRIVMSG', [channel], msg
+    
+    # break lines
+    msgs = [msg]
+    # todo: configurable max line length
+    while msgs.last.bytesize > 460
+      lastline = msgs.last
+      pieces = lastline.split(/\b/)
+      newline = ''
+      
+      lasti = 0
+      pieces.each_with_index do |piece, i|
+        lasti = i
+        if (newline.bytesize + piece.bytesize) >= 455
+          break
+        end
+        newline << piece
+      end
+      if lasti == 0
+        newline = lastline.force_encoding('binary')[0...455].force_encoding('utf-8') + " \u2026"
+        lastline = lastline.force_encoding('utf-8')[455..-1]
+        msgs[-1] = newline
+        msgs << lastline
+      elsif lasti < pieces.length - 1
+        lastline = lastline[newline.length..-1]
+        newline << " \u2026"
+        msgs[-1] = newline
+        msgs << lastline
+      else
+        # hum
+      end
+    end
+    msgs.each do |msg|
+      send 'PRIVMSG', [channel], msg
+    end
   end
   def send command, params=[], text=nil
     tosend = "#{command.upcase} #{params.join ' '}#{" :#{text}" if text}\r\n"
