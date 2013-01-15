@@ -503,7 +503,7 @@ command_set :api do
   
   command :py, 'Evaluate an expression in Python' do
     require_argstr
-    respond Net::HTTP.get(URI "http://tumbolia.appspot.com/py/#{URI.encode argstr}")
+    respond Net::HTTP.get(URI "http://tumbolia.appspot.com/py/#{URI.encode argstr, /./}")
   end
   
   command :title, 'Get the title of a web page' do
