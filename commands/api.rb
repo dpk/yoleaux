@@ -288,7 +288,7 @@ command_set :api do
         json_src = Net::HTTP.get(URI("http://#{lang}.wikipedia.org/w/api.php?action=mobileview&page=#{article_slug}&format=json&sections=0"))
         html_src = JSON.parse(json_src)['mobileview']['sections'][0]['text']
         h = Nokogiri::HTML(html_src)
-        firstp = (h % 'body > p').inner_text.gsub(/\[(?:(?:nb )\d+|citation needed)\]/, '')
+        firstp = (h % 'body > p').inner_text.gsub(/\[(?:(?:nb )?\d+|citation needed)\]/, '')
         gist = ''
         sentences = firstp.split(/(?<=\. )/)
         if sentences.first.length > maxlen
@@ -531,14 +531,15 @@ command_set :api do
   end
   
   command :tw, 'Show a tweet by ID or URL; or get the latest tweet from a user' do
-    require_argstr
+    require_argstr unless env.last_url.include? 'twitter.com/'
+    arg = (argstr.empty? ? env.last_url : argstr)
     tweet = (
-      if argstr.match(/^\d+$/)
+      if arg.match(/^\d+$/)
         tweet_with_id argstr
-      elsif argstr.match(/^https?:/)
-        tweet_with_id argstr.match(/(\d+)\/?$/)[1]
-      else argstr
-        tweet_from_user argstr.sub('@', '')
+      elsif arg.match(/^https?:/)
+        tweet_with_id arg.match(/(\d+)\/?$/)[1]
+      else arg
+        tweet_from_user arg.sub('@', '')
       end
     )
     
