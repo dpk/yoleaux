@@ -36,7 +36,7 @@ command_set :api do
           h = Nokogiri::HTML(response.body)
           
           pagemover = h.xpath('//div[@id="foot"]/table[@id="nav"]/tr[@valign="top"]/td[not(@class="b")]').last
-          if pagemover % 'a'
+          if pagemover and pagemover % 'a'
             lasturi = uri
             uri = URI "http://www.google.com#{(pagemover % 'a')['href']}"
           else
