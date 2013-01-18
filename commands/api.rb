@@ -296,7 +296,7 @@ command_set :api do
     end
     
     def shorten_url url
-      Net::HTTP.get(URI "http://tinyurl.com/api-create.php?url=#{URI.encode(url)}")
+      Net::HTTP.get(URI "http://is.gd/create.php?format=simple&url=#{URI.encode(url, /./)}")
     end
     
     def wikipedia lang='en', search
