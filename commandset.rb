@@ -10,6 +10,7 @@ class Yoleaux
     def initialize
       @commands = self.class.commands
       @callbacks = self.class.callbacks
+      @name = self.class.name
     end
     
     attr_reader :env
@@ -99,10 +100,10 @@ class Yoleaux
     end
     
     def schedule time, callback, *args
-      @env.out.send ScheduledTask.new time, nil, [@@name, callback], args
+      @env.out.send ScheduledTask.new time, nil, [@name, callback], args
     end
     def on_next_message to, callback, *args
-      @env.out.send Tell.new to, [@@name, callback], args
+      @env.out.send Tell.new to, [@name, callback], args
     end
     
     def db name, val={}
@@ -118,6 +119,7 @@ class Yoleaux
         @callbacks = {}
       end
       
+      attr_accessor :name
       attr_reader :commands, :command_docs, :callbacks
       
       def command name, docs=nil, &block
@@ -163,9 +165,6 @@ class Yoleaux
       end
     end
     
-    def self.name= name; @@name = name; end
-    def self.name; @@name; end
-    
     init
     
     class DatabaseProxy
@@ -201,8 +200,8 @@ class Yoleaux
   module CommandSetHelper
     def command_set name, &block
       pkg = Class.new(CommandSet, &block)
-      pkg.name = name
       Yoleaux.command_sets << [name, pkg]
+      pkg.name = name
     end
   end
   
