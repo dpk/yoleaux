@@ -16,11 +16,36 @@ command_set :api do
     def google_count query, kinds=[:site, :api]
       counts = {}
       if kinds.include? :site
-        uri = URI "http://www.google.com/search?&q=#{URI.encode(query)}&nfpr=1"
+        uri = URI "http://www.google.com/search?&q=#{URI.encode(query)}&nfpr=1&filter=0"
         http = Net::HTTP.new(uri.host)
         response = http.request_get(uri.path+'?'+uri.query, {'User-Agent' => 'Mozilla/5.0'})
         h = Nokogiri::HTML(response.body)
-        counts[:site] = (h % '#resultStats').inner_text.gsub(/[^0-9]/,'').to_i
+        if (h % 'div.e') and (h % 'div.e').inner_text.include? 'No results found'
+          counts[:site] = 0
+        else
+          counts[:site] = (h % '#resultStats').inner_text.gsub(/[^0-9]/,'').to_i
+        end
+      end
+      if kinds.include? :end and not counts[:site].zero?
+        lasturi = URI 'http://www.google.com/'
+        uri = URI "http://www.google.com/search?&q=#{URI.encode(query)}&nfpr=1&filter=0&start=90"
+        h = nil
+        10.times do
+          http = Net::HTTP.new(uri.host)
+          response = http.request_get(uri.path+'?'+uri.query, {'User-Agent' => 'Mozilla/5.0', 'Referer' => lasturi.to_s})
+          h = Nokogiri::HTML(response.body)
+          
+          pagemover = h.xpath('//div[@id="foot"]/table[@id="nav"]/tr[@valign="top"]/td[not(@class="b")]').last
+          if pagemover % 'a'
+            lasturi = uri
+            uri = URI "http://www.google.com#{(pagemover % 'a')['href']}"
+          else
+            break
+          end
+        end
+        if h
+          counts[:end] = (h % '#resultStats').inner_text.match(/([\d,]+) res/)[1].gsub(',','').to_i
+        end
       end
       if kinds.include? :api
         uri = URI "http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=#{URI.encode(query)}"
@@ -31,6 +56,7 @@ command_set :api do
           counts[:api] = response['responseData']['cursor']['estimatedResultCount'].to_i
         end
       end
+      counts.delete(:end) if counts[:site] == counts[:end]
       counts
     end
     def number_digit_delimit number
@@ -425,9 +451,15 @@ command_set :api do
   end
   
   command :gc, 'Count the number of Google results for a phrase' do
-    require_argstr
-    counts = google_count(argstr)
-    halt respond("Couldn't count results.") if counts == {}
+    require_argtext
+    allkinds = %w{site end api}
+    if not switches.empty?
+      kinds = switches.map {|kind| kind.to_sym if allkinds.include? kind }.compact
+    else
+      kinds = allkinds.map(&:to_sym)
+    end
+    counts = google_count(argtext, kinds)
+    halt respond("Couldn't count results.") if counts.empty?
     responses = []
     counts.each do |source, count|
       responses << "#{number_digit_delimit count} (#{source})"
