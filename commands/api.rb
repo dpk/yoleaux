@@ -26,7 +26,7 @@ command_set :api do
           counts[:site] = (h % '#resultStats').inner_text.gsub(/[^0-9]/,'').to_i
         end
       end
-      if kinds.include? :end and not counts[:site].zero?
+      if kinds.include? :end and counts[:site] != 0
         lasturi = URI 'http://www.google.com/'
         uri = URI "http://www.google.com/search?&q=#{URI.encode(query)}&nfpr=1&filter=0&start=90"
         h = nil
@@ -267,12 +267,13 @@ command_set :api do
       content = (h % '#mainContent')
       out = OpenStruct.new
       out.url = resp['Location']
-      out.entry = (content % 'h1.entryTitle').inner_text
-      out.pronunciation = (content % 'div.entryPronunciation a').inner_text.strip
+      out.entry = (content % 'h1.entryTitle').children.first.inner_text
+      out.homograph = ((content % 'h1.entryTitle span.homograph').inner_text.strip rescue nil)
+      out.pronunciation = ((content % 'div.entryPronunciation a').inner_text.strip rescue nil)
       out.senses = []
       content.search('section.senseGroup').each do |sg|
         sense = OpenStruct.new
-        sense.word_type = (sg % 'span.partOfSpeech').inner_text
+        sense.word_type = ((sg % 'span.partOfSpeech').inner_text rescue nil)
         sense.inflections = sg.search('span.inflection').map(&:inner_text)
         sense.meanings = []
         sg.search('ul.sense-entry').each do |se|
@@ -285,6 +286,13 @@ command_set :api do
         out.senses << sense
       end
       out
+    end
+    def dict_truncate text
+      if text.length >= 190
+        text.gsub(/\A(.{,190}\W).+\Z/, "\\1\u2026")
+      else
+        text
+      end
     end
     
     def normalize_url url
@@ -597,24 +605,24 @@ command_set :api do
   
   command :w, 'Look up a word in the Oxford Dictionary of English (not to be confused with the Oxford English Dictionary)' do
     require_argstr
-    maxlen = 475
-    maxsenselen = 120
+    maxlen = 450
+    maxsenselen = 200
     result = dict argstr
     halt respond("Sorry, I couldn't find a definition for '#{argstr}'.") if result.nil?
     url = result.url.gsub(/\?q=(.+)$/, '')
     maxlen -= url.length
     
-    senseabbrs = {'noun' => 'n.', 'verb' => 'v.', 'adjective' => 'adj.', 'adverb' => 'adv.', 'exclamation' => 'excl.', 'preposition' => 'prep.'}
+    senseabbrs = {'noun' => 'n.', 'verb' => 'v.', 'adjective' => 'adj.', 'adverb' => 'adv.', 'exclamation' => 'excl.', 'preposition' => 'prep.', 'abbreviation' => 'abbr.'}
     
-    response = "#{result.entry} (#{result.pronunciation}): "
+    response = "#{result.entry}#{superscript result.homograph if result.homograph}#{" (#{result.pronunciation})" if result.pronunciation}: "
     senseresps = []
     result.senses.each do |sense|
-      senseresp = (senseabbrs.has_key?(sense.word_type) ? senseabbrs[sense.word_type] : sense.word_type)+' '
+      senseresp = "#{(senseabbrs.has_key?(sense.word_type) ? senseabbrs[sense.word_type] : sense.word_type)} "
       unless sense.inflections.empty?
         senseresp << "(#{sense.inflections.join ', '}) "
       end
-      sense.meanings.each_with_index do |meaning, i|
-        meaningresp = "#{"#{i+1}." if sense.meanings.length > 1}#{meaning.definition} \"#{meaning.examples.first}\"; "
+      sense.meanings.each_with_index.map do |meaning, i|
+        meaningresp = "#{"#{i+1}." if sense.meanings.length > 1}#{dict_truncate meaning.definition.gsub(/[\.:]$/, '')}#{": #{meaning.examples.first}" unless meaning.examples.empty? or (meaning.definition.length + (meaning.examples.first || '').length) >= (maxsenselen - 4)}; "
         if (senseresp.length + meaningresp.length) > maxsenselen
           break
         else
