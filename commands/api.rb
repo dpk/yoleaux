@@ -81,7 +81,7 @@ command_set :api do
     end
     
     def google_calculator query
-      result = YAML.load Net::HTTP.get URI "http://www.google.com/ig/calculator?q=#{URI.encode query, /./}"
+      result = YAML.load (Net::HTTP.get URI "http://www.google.com/ig/calculator?q=#{URI.encode query, /./}").gsub("\xA0".force_encoding('binary'), ' ')
       result['lhs'] = entities result['lhs'].force_encoding('iso-8859-1')
       result['rhs'] = entities result['rhs'].force_encoding('iso-8859-1')
       result['rhs'] = result['rhs'].gsub(%r{<sup>(.*)</sup>}) do
@@ -502,6 +502,7 @@ command_set :api do
     unless uri.match(/[.:\/]/)
       header, uri = uri, header
     end
+    
     uri = URI uri
     http = Net::HTTP.new(uri.host, uri.port)
     sslify(uri, http)
