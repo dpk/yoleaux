@@ -315,7 +315,7 @@ command_set :api do
       article_slug = article_url.match(%r{\.wikipedia\.org/wiki/(.*)}i)[1]
       categories = Net::HTTP.get(URI("http://en.wikipedia.org/w/api.php?action=query&prop=categories&titles=#{article_slug}&format=json"))
       categories = JSON.parse categories
-      disambig = categories['query']['pages'].first[1]['categories'].map{|x| x['title'] }.include? 'Category:Disambiguation pages'
+      disambig = categories['query']['pages'].first[1]['categories'].to_a.map{|x| x['title'] }.include? 'Category:Disambiguation pages'
       if disambig
         return OpenStruct.new :url => article_url, :gist => "Disambiguation: #{categories['query']['pages'].first[1]['title']}"
       else
@@ -622,7 +622,7 @@ command_set :api do
         senseresp << "(#{sense.inflections.join ', '}) "
       end
       sense.meanings.each_with_index.map do |meaning, i|
-        meaningresp = "#{"#{i+1}." if sense.meanings.length > 1}#{dict_truncate meaning.definition.gsub(/[\.:]$/, '')}#{": #{meaning.examples.first}" unless meaning.examples.empty? or (meaning.definition.length + (meaning.examples.first || '').length) >= (maxsenselen - 4)}; "
+        meaningresp = "#{"#{i+1}. " if sense.meanings.length > 1}#{dict_truncate meaning.definition.gsub(/[\.:]$/, '')}#{": #{meaning.examples.first}" unless meaning.examples.empty? or (meaning.definition.length + (meaning.examples.first || '').length) >= (maxsenselen - 4)}; "
         if (senseresp.length + meaningresp.length) > maxsenselen
           break
         else
