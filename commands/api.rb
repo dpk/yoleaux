@@ -308,9 +308,14 @@ command_set :api do
     end
     
     def wikipedia lang='en', search
-      maxlen = 250
+      maxlen = 350
       
-      article_url = google("#{search} site:#{lang}.wikipedia.org/wiki")
+      uri = URI "http://#{lang}.wikipedia.org/w/index.php?search=#{URI.encode search}&title=Special%3ASearch"
+      http = Net::HTTP.new(uri.host, uri.port)
+      sslify(uri, http)
+      path = "#{uri.path.empty? ? '/' : uri.path}#{'?'+uri.query if uri.query}"
+      resp = http.request_head(path)
+      article_url = (resp['Location'] or google("site:#{lang}.wikipedia.org/wiki #{search}"))
       return nil if article_url.nil?
       article_slug = article_url.match(%r{\.wikipedia\.org/wiki/(.*)}i)[1]
       categories = Net::HTTP.get(URI("http://en.wikipedia.org/w/api.php?action=query&prop=categories&titles=#{article_slug}&format=json"))
@@ -320,21 +325,26 @@ command_set :api do
         return OpenStruct.new :url => article_url, :gist => "Disambiguation: #{categories['query']['pages'].first[1]['title']}"
       else
         json_src = Net::HTTP.get(URI("http://#{lang}.wikipedia.org/w/api.php?action=mobileview&page=#{article_slug}&format=json&sections=0"))
-        html_src = JSON.parse(json_src)['mobileview']['sections'][0]['text']
+        j = JSON.parse(json_src)
+        html_src = j['mobileview']['sections'][0]['text']
         h = Nokogiri::HTML(html_src)
-        firstp = (h % 'body > p').inner_text.gsub(/\[(?:(?:nb )?\d+|citation needed)\]/, '')
-        gist = ''
-        sentences = firstp.split(/(?<=\. )/)
-        if sentences.first.length > maxlen
-          gist = sentences.first.match(/^(.{,240}\W)/)[1] + " \u2026"
-        else
-          sentences.each do |sentence|
-            break if gist.length + sentence.length >= maxlen
-            gist << sentence
+        begin
+          firstp = (h % 'body > p').inner_text.gsub(/\[(?:(?:nb )?\d+|citation needed)\]/, '')
+          gist = ''
+          sentences = firstp.split(/(?<=\. )/)
+          if sentences.first.length > maxlen
+            gist = sentences.first.match(/^(.{,240}\W)/)[1] + " \u2026"
+          else
+            sentences.each do |sentence|
+              break if gist.length + sentence.length >= maxlen
+              gist << sentence
+            end
           end
+          gist.strip!
+        rescue
+          gist = j['mobileview']['normalizedtitle']
         end
-        gist.strip!
-      
+        
         return OpenStruct.new :url => article_url, :gist => gist
       end
     end
