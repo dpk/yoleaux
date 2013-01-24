@@ -83,6 +83,12 @@ command_set :general do
               "\xCD\xA0\xCD\xA1\xCD\xA2\xCD\xA3").force_encoding('utf-8')
   end
   
+  command :bytes, 'Show bytes of the input string' do
+    type = (switches.first or 'hex')
+    fmtmap = {'hex' => '%02x', 'oct' => '%04o', 'dec' => '%d'}
+    respond argtext.bytes.map {|b| sprintf (fmtmap[type] or "%02x"), b }.join ' '
+  end
+  
   command :seen, 'Ask me when I last saw a user speaking' do
     require_argstr
     seen = db(:seen)[argstr.downcase]
