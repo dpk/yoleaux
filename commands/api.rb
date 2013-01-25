@@ -111,7 +111,7 @@ command_set :api do
     def expand_twitter_links text, entities
       text = text.dup
       entities['urls'].each do |url|
-        text[url['indices'][0]..url['indices'][1]] = url['expanded_url']
+        text[url['indices'][0]...url['indices'][1]] = url['expanded_url']
       end
       text
     end
@@ -582,7 +582,7 @@ command_set :api do
   end
   
   command :tw, 'Show a tweet by ID or URL; or get the latest tweet from a user' do
-    require_argstr unless env.last_url.include? 'twitter.com/'
+    require_argstr unless env.last_url.to_s.include? 'twitter.com/'
     arg = (argstr.empty? ? env.last_url : argstr)
     tweet = (
       if arg.match(/^\d+$/)
@@ -595,7 +595,7 @@ command_set :api do
     )
     
     text = expand_twitter_links tweet['text'], tweet['entities']
-    respond "#{text.gsub("\n", ' ').gsub(/[[:space:]]+/, ' ')} (@#{tweet['user']['screen_name']})"
+    respond "#{entities text.gsub(/[[:space:]]+/, ' ')} (@#{tweet['user']['screen_name']})"
   end
   
   command :u, 'Search for a Unicode character by codepoint, name, or raw character' do
