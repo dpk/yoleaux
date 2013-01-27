@@ -103,7 +103,7 @@ class Yoleaux
         end)
         if not resp['Content-Type'].downcase.include? 'text/plain'
           return respond "#{@env.nick}: Sorry: that command is a web-service, but it didn't respond in plain text."
-        elsif (lines=resp.body.lines.to_a).length > 1 or lines.first.bytesize > (500-prepend.bytesize)
+        elsif (lines=resp.body.rstrip.lines.to_a).length > 1 or lines.first.bytesize > (500-prepend.bytesize)
           return respond "#{@env.nick}: Sorry: that command is a web-service, but its response was too long."
         else
           response = "#{prepend}#{lines.first}"
