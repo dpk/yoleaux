@@ -84,7 +84,7 @@ command_set :api do
       result = YAML.load (Net::HTTP.get URI "http://www.google.com/ig/calculator?q=#{URI.encode query, /./}").gsub("\xA0".force_encoding('binary'), ' ')
       result['lhs'] = entities result['lhs'].force_encoding('iso-8859-1')
       result['rhs'] = entities result['rhs'].force_encoding('iso-8859-1')
-      result['rhs'] = result['rhs'].gsub(%r{<sup>(.*)</sup>}) do
+      result['rhs'] = result['rhs'].gsub(%r{<sup>(.*?)</sup>}) do
         superscript $1
       end
       result
@@ -93,7 +93,17 @@ command_set :api do
       base = 0x2070
       special = {'1' => "\u00B9", '2'=>"\u00B2", '3' => "\u00B3", '(' => "\u207D", ')' => "\u207E", '-' => "\u207B", '+' => "\u207A"}
       supstr = ''
-      str.each_char {|c| supstr << (special.has_key?(c) ? special[c] : (base + c.to_i)) }
+      str.each_char do |c|
+        supstr << (
+          if special.has_key?(c)
+            special[c]
+          elsif c.to_i <= 9
+            (base + c.to_i)
+          else
+            c
+          end
+        )
+      end
       supstr
     end
     
