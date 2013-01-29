@@ -532,6 +532,24 @@ command_set :api do
     end
   end
   
+  # todo: make a general "google api call" function for this and .news
+  command :img, 'Search for an image with Google image search' do
+    if argstr.downcase.include? 'lily' and argstr.downcase.include? 'cole' # for Noah
+      halt respond "#{env.nick}: Sorry, this command cannot be used to search for photos of Lily Cole."
+    end
+    src = Net::HTTP.get URI("http://ajax.googleapis.com/ajax/services/search/images?q=#{URI.encode argstr}&v=1.0&safe=off")
+    result = JSON.parse src
+    if result.has_key? 'responseData' and
+       result['responseData'].has_key? 'results' and
+       not result['responseData']['results'].empty? and
+       result['responseData']['results'].first.has_key? 'unescapedUrl'
+      url = result['responseData']['results'].first['unescapedUrl']
+      respond "#{url} (more: #{shorten_url result['responseData']['cursor']['moreResultsUrl']})"
+    else
+      respond "#{env.nick}: Sorry, no image search result!"
+    end
+  end
+  
   command :mangle, 'Put a phrase through the multiple-translation mangle' do
     require_argstr
     phrase = argstr
