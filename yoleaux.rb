@@ -61,8 +61,8 @@ class Yoleaux
     @stopblame = who
   end
   
-  def join channel
-    send 'JOIN', [], channel
+  def join channels
+    send 'JOIN', [], channels.join(',')
   end
   
   def handle_loop
@@ -289,7 +289,10 @@ class Yoleaux
     when 'PING'
       send 'PONG', [@nick], event.text
     when '251'
-      @channels.each {|channel| join channel }
+      @channels.each_slice(3) {|channels| join channels }
+      if @nickpass
+        privmsg 'NickServ', "IDENTIFY #@nickpass"
+      end
     end
   end
   
@@ -341,6 +344,7 @@ class Yoleaux
     @server = (@config['server'] or raise 'no server option in config')
     @port = (@config['port'] or 6667)
     @nick = (@config['nick'] or raise 'no nick option in config')
+    @nickpass = (@config['nick_password'] or nil)
     @user = (@config['user'] or @nick)
     @realname = (@config['realname'] or 'Yoleaux L. Only-Once')
     @nworkers = (@config['workers'] or 4)
