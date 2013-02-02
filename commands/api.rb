@@ -717,7 +717,7 @@ command_set :api do
     if article
       respond "\"#{article.gist}\" \u2014 #{article.url}"
     else
-      respond "#{env.nick}: Sorry, I couldn't find an article."
+      respond "#{env.nick}: Sorry, I couldn't find article."
     end
   end
 end
