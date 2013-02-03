@@ -338,22 +338,8 @@ command_set :api do
         j = JSON.parse(json_src)
         html_src = j['mobileview']['sections'][0]['text']
         h = Nokogiri::HTML(html_src)
-        begin
-          firstp = (h % 'body > p').inner_text.gsub(/\[(?:(?:nb )?\d+|citation needed)\]/, '')
-          gist = ''
-          sentences = firstp.split(/(?<=\. )/)
-          if sentences.first.length > maxlen
-            gist = sentences.first.match(/^(.{,240}\W)/)[1] + " \u2026"
-          else
-            sentences.each do |sentence|
-              break if gist.length + sentence.length >= maxlen
-              gist << sentence
-            end
-          end
-          gist.strip!
-        rescue
-          gist = j['mobileview']['normalizedtitle']
-        end
+        firstp = (h % 'body > p').inner_text.gsub(/\[(?:(?:nb )?\d+|citation needed)\]/, '')
+        gist = (sentence_truncate(firstp, maxlen) or j['mobileview']['normalizedtitle'])
         
         return OpenStruct.new :url => article_url, :gist => gist
       end
@@ -366,11 +352,26 @@ command_set :api do
       src = Net::HTTP.get uri
       h = Nokogiri::HTML(src)
       text = ((h % 'dd.highlight') or return nil).inner_text
-      sentences = text.split(/(?<=\. )/)
-      gist = ''
-      sentences.each {|sentence| (gist << sentence) unless (gist.length + sentence.length) > 250 }
-      out.gist = gist
+      out.gist = sentence_truncate text, 250
       out
+    end
+    
+    def sentence_truncate text, maxlen=250
+      begin
+        gist = ''
+        sentences = text.split(/(?<=\. )/)
+        if sentences.first.length > maxlen
+          gist = sentences.first.match(/^(.{,#{maxlen-10}}\W)/)[1] + " \u2026"
+        else
+          sentences.each do |sentence|
+            break if gist.length + sentence.length >= maxlen
+            gist << sentence
+          end
+        end
+        gist.strip
+      rescue
+        nil
+      end
     end
     
     def wolfram_alpha query
