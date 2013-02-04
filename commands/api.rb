@@ -446,6 +446,8 @@ command_set :api do
     respond response.join(' ')
   end
   
+  alias_command :d, :w
+  
   command :decode, 'Decode HTML entities' do
     require_argstr
     respond entities argstr
@@ -593,7 +595,7 @@ command_set :api do
     if m=argstr.match(/^(?:rfc ?)?(\d+)$/i)
       url = "http://tools.ietf.org/html/rfc#{m[1]}"
     elsif m=argstr.match(/^(?:bcp ?)(\d+)$/i)
-      url = "http://tools.ietf.org/html/rfc#{m[1]}"
+      url = "http://tools.ietf.org/html/bcp#{m[1]}"
     else
       url = google "site:tools.ietf.org/html #{argstr}"
     end
@@ -698,7 +700,6 @@ command_set :api do
     
     respond "#{response[0..-3]} \u2014 #{url}"
   end
-  alias_command :d, :w
   
   command :wa, 'Query Wolfram Alpha' do
     require_argstr
