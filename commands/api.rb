@@ -338,7 +338,7 @@ command_set :api do
         j = JSON.parse(json_src)
         html_src = j['mobileview']['sections'][0]['text']
         h = Nokogiri::HTML(html_src)
-        firstp = (h % 'body > p').inner_text.gsub(/\[(?:(?:nb )?\d+|citation needed)\]/, '')
+        firstp = (h % 'body > p').inner_text.gsub(/\[(?:(?:nb )?\d+|citation needed|unreliable source\?)\]/, '')
         gist = (sentence_truncate(firstp, maxlen) or j['mobileview']['normalizedtitle'])
         
         return OpenStruct.new :url => article_url, :gist => gist
@@ -533,6 +533,8 @@ command_set :api do
     end
   end
   
+  alias_command :ietf, :rfc
+  
   # todo: make a general "google api call" function for this and .news
   command :img, 'Search for an image with Google image search' do
     if argstr.downcase.include? 'lily' and argstr.downcase.include? 'cole' # for Noah
@@ -584,6 +586,23 @@ command_set :api do
   command :py, 'Evaluate an expression in Python' do
     require_argstr
     respond Net::HTTP.get(URI "http://tumbolia.appspot.com/py/#{URI.encode argstr, /./}")
+  end
+  
+  command :rfc, 'Get a link and title for an RFC or another IETF document' do
+    require_argstr
+    if m=argstr.match(/^(?:rfc ?)?(\d+)$/i)
+      url = "http://tools.ietf.org/html/rfc#{m[1]}"
+    elsif m=argstr.match(/^(?:bcp ?)(\d+)$/i)
+      url = "http://tools.ietf.org/html/rfc#{m[1]}"
+    else
+      url = google "site:tools.ietf.org/html #{argstr}"
+    end
+    title = page_title url
+    if url.nil? or title.nil?
+      respond "Sorry, no document found."
+    else
+      respond "#{title}: #{url}"
+    end
   end
   
   command :title, 'Get the title of a web page' do
