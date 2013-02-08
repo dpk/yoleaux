@@ -129,20 +129,37 @@ a very different way, which seemed not to exhibit those problems. He
 worked a little more on it, then, one day, the bot we know as Yoleaux
 popped out of his keyboard and into his computer.
 
-     ______________________________ 
-    ( Who made this thing, anyway? )
-     ------------------------------ 
+     _______________________________________
+    ( What are people saying about Yoleaux? )
+     ---------------------------------------
             o   ^__^
              o  (oo)\_______
                 (__)\       )\/\
                     ||----w |
                     ||     ||
 
-Yoleaux was principally written by David Kendal. However, many parts
-where inspired by the sbpware which preceded it, and as such dpk owes
-a huge thanks to Sean B. Palmer: many of the commands are direct Ruby
-translations of sbp's original Python code for Phenny and Duxlot. dpk
-also owes Noah Slater a megathank for complaining at him about things
-which are broken / changed compared to Phenny and Duxlot, which he
-undoubtedly will do. Noah also inadvertently named the bot. I must also
-credit Matt Read and Mark E. Shoulson for helping me to debug.
+Acclaim for Yoleaux:
+
+<sbp> yoleaux doesn't do some things
+<sbp> such as work
+
+<sbp> it's all mostly bubblegum and moonbeams, held together with
+      knicker elastic
+
+                                      ______________________________ 
+                                     ( Who made this thing, anyway? )
+                                      ------------------------------ 
+                                                       ^__^   o
+                                               _______/(oo)  o
+                                           \/\(       /(__)
+                                              | w----||                    
+                                              ||     ||
+
+Yoleaux was principally written by David Kendal. However, many parts where
+inspired by the sbpware which preceded it, and as such dpk owes a huge thanks to
+Sean B. Palmer: many of the commands are direct Ruby translations of sbp's
+original Python code for Phenny and Duxlot. dpk also owes Noah Slater a
+megathank for complaining at him about things which are broken / changed
+compared to Phenny and Duxlot, which he undoubtedly will do. Noah also
+inadvertently named the bot. I must also credit Noah, Matt Read, Mark E.
+Shoulson, Björn Höhrmann and Aaron Matthews for helping me to debug.
