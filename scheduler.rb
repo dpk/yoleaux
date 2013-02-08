@@ -26,7 +26,8 @@ class Yoleaux
         if not timetillnext.nil? and timetillnext < 0
           do_tasks
         else
-          selectresult, _, _ = Queue.select [@inqueue, @spr], [], [], timetillnext
+          # % 3600 prevents EINVAL when people (ahem, Ash) give stupid far-future timeouts
+          selectresult, _, _ = Queue.select [@inqueue, @spr], [], [], (timetillnext % 3600)
           if selectresult
             selectresult.each do |i|
               if i == @inqueue

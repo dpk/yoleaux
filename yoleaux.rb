@@ -99,6 +99,7 @@ class Yoleaux
             when CHLDSIG
               while (pid, stat = ::Process.wait2(-1, ::Process::WNOHANG) rescue nil)
                 @log.puts "stopped process: #{pid}: #{stat.exitstatus}"
+                isworker = @workers.any? {|p| p.pid == pid }
                 @workers.reject! {|p| p.pid == pid }
                 if @stopasap
                   if @workers.empty?
@@ -107,7 +108,7 @@ class Yoleaux
                     @socket = nil
                     return
                   end
-                elsif @reloading
+                elsif @reloading and isworker
                   @log.puts "reloading worker #{pid} ..."
                   start_worker
                   @commands.each do |id, comm|
@@ -119,19 +120,27 @@ class Yoleaux
                     privmsg @reloading.channel, "#{@reloading.reloader}: Reload done (took #{'%.3f' % (Time.now - @reloading.started)}s)."
                     @reloading = false
                   end
-                elsif not stat.exitstatus.zero?
-                  @log.puts "restarting crashed worker #{pid} ..."
-                  start_worker
-                  @commands.each do |id, comm|
-                    # there's some kind of race condition-y heisenbug here, which is why we check that there is a handler before comparing pids
-                    if comm.handler_process and comm.handler_process.pid == pid
-                      if comm.started? and not comm.done?
-                        privmsg comm.channel, "#{comm.user}: Sorry, that command (#@prefix#{comm.name}) crashed." unless comm.is_a? Callback
-                        comm.done!
-                      elsif not comm.started?
-                        dispatch_command comm
+                elsif stat.exitstatus.nil? or (not stat.exitstatus.zero?)
+                  if isworker
+                    @log.puts "restarting crashed worker #{pid} ..."
+                    start_worker
+                    @commands.each do |id, comm|
+                      # there's some kind of race condition-y heisenbug here, which is why we check that there is a handler before comparing pids
+                      if comm.handler_process and comm.handler_process.pid == pid
+                        if comm.started? and not comm.done?
+                          privmsg comm.channel, "#{comm.user}: Sorry, that command (#@prefix#{comm.name}) crashed." unless comm.is_a? Callback
+                          comm.done!
+                        elsif not comm.started?
+                          dispatch_command comm
+                        end
                       end
                     end
+                  elsif @scheduler.pid == pid
+                    @log.puts "restarting crashed schedular ..."
+                    start_scheduler
+                  elsif @sender.pid == pid
+                    @log.puts "restarting crashed sendar ..."
+                    start_sender
                   end
                 end
               end
@@ -297,7 +306,7 @@ class Yoleaux
   end
   
   def parse_command event
-    if event.type == 'PRIVMSG' 
+    if event.type == 'PRIVMSG'
       channel = (event.args[0] == @nick ? event.nick : event.args[0])
       message = event.text
       response_prefix = nil
