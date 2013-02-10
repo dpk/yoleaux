@@ -1,4 +1,7 @@
 
+require 'digest/sha2'
+require 'time'
+
 command_set :general do
   helpers do
     def parse_time_interval time
@@ -18,6 +21,15 @@ command_set :general do
         secs += (scalar * (abbrs[unit.downcase] || 0))
       end
       secs
+    end
+    
+    def set_reminder &parser
+	  require_argstr
+	  time, message = argstr.split(' ', 2)
+	  time = parser.call time
+	  schedule time, :remind, env.channel, env.nick, message
+	  alerttime = (time.is_a?(Numeric) ? (Time.now + time) : time)
+	  respond "#{env.nick}: I'll remind you #{(alerttime.to_date != Time.now.to_date) ? 'on' : 'at'} #{format_time alerttime}"
     end
     
     def format_time time
@@ -113,16 +125,43 @@ command_set :general do
     end
   end
   
-  command :in, 'Set a reminder for yourself' do
+  command :pick, 'Makes a decision from multiple options for you. (The author of this bot cannot be held liable for the consequences of using this command)' do
     require_argstr
-    time, message = argstr.split(' ', 2)
-    seconds = parse_time_interval time
-    if seconds.zero?
-      halt respond "#{env.nick}: Sorry, I don't understand your duration. Try using units: 1h30m, 1d, etc."
+    choices = argstr.split(argstr.include?(';') ? ';' : ',').map {|opt| opt.strip }.uniq.sort
+    halt respond "#{env.nick}: You must provide at least two options." unless choices.length > 1
+    hash = Digest::SHA256.hexdigest(choices.map(&:downcase).join("\x00")).to_i(16)
+    respond choices[hash % choices.length]
+  end
+  alias_command :choose, :pick
+  
+  command :at, 'Set a reminder for yourself at a certain date and/or time' do
+    set_reminder do |tstr|
+      begin
+        raise ArgumentError unless tstr.include?(':') or tstr.include?('-')
+        time = DateTime.iso8601(tstr.dup) # fuck Ruby
+      rescue ArgumentError
+        halt respond "#{env.nick}: Sorry, I don't understand that date/time."
+      end
+      if not tstr.include? ':'
+        time += (DateTime.now - Date.today)
+      elsif not tstr.include? '-' and time < DateTime.now
+        time += 1
+      end
+      if time < DateTime.now
+        halt respond "#{env.nick}: Sorry, I can't deliver reminders to the past."
+      end
+      time
     end
-    schedule seconds, :remind, env.channel, env.nick, message
-    alerttime = Time.now + seconds
-    respond "#{env.nick}: I'll remind you #{(alerttime.to_date != Time.now.to_date) ? 'on' : 'at'} #{format_time alerttime}"
+  end
+  alias_command :at, :on
+  command :in, 'Set a reminder for yourself in a certain amount of time' do
+    set_reminder do |tstr|
+      time = parse_time_interval tstr
+	  if time.zero?
+		halt respond "#{env.nick}: Sorry, I don't understand your duration. Try using units: 1h30m, 1d, etc."
+	  end
+	  time
+    end
   end
   callback :remind do |channel, nick, message|
     send channel, (if message

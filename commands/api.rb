@@ -313,6 +313,26 @@ command_set :api do
       end
     end
     
+    def validate url
+      out = OpenStruct.new
+      out.source = "http://html5.validator.nu/?doc=#{URI.encode url, /[^a-z0-9\/.\-_]|/i}"
+      src = Net::HTTP.get(URI out.source)
+      h = Nokogiri::HTML(src)
+      if e=(h % 'p.failure')
+        # No, I wasn't prepared for this ...
+        out.valid = false
+      elsif e=(h % 'p.success')
+        # Turns out you were prepared for this!
+        out.valid = true
+      else
+        out.valid = nil
+      end
+      if e
+        out.message = e.inner_text.strip
+      end
+      return out
+    end
+    
     def shorten_url url
       Net::HTTP.get(URI "http://is.gd/create.php?format=simple&url=#{URI.encode(url, /./)}")
     end
@@ -537,6 +557,8 @@ command_set :api do
   
   alias_command :ietf, :rfc
   
+  alias_command :i_love_the_w3c, :val
+  
   # todo: make a general "google api call" function for this and .news
   command :img, 'Search for an image with Google image search' do
     if argstr.downcase.include? 'lily' and argstr.downcase.include? 'cole' # for Noah
@@ -662,6 +684,15 @@ command_set :api do
       respond response
       break if name.downcase == argstr.downcase # exact name match? only show one
     end
+  end
+  
+  command :val, 'Validate the source of a web page' do
+    result = validate (argstr.empty? ? env.last_url : argstr)
+    if result.valid.nil?
+      halt respond "NOT SURE IF INVALID / OR VALIDATOR SCREWED UP"
+    end
+    
+    respond "#{result.message} \u2014 #{result.source}"
   end
   
   command :w, 'Look up a word in the Oxford Dictionary of English (not to be confused with the Oxford English Dictionary)' do
