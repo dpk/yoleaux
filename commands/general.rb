@@ -153,7 +153,7 @@ command_set :general do
       time
     end
   end
-  alias_command :at, :on
+  alias_command :on, :at
   command :in, 'Set a reminder for yourself in a certain amount of time' do
     set_reminder do |tstr|
       time = parse_time_interval tstr
