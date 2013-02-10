@@ -55,7 +55,7 @@ class Yoleaux
       when 'help'
         argstr = command.args.to_s.strip
         if argstr.empty?
-          @outqueue.send Message.new command.channel, "#{command.user}: I'm yoleaux. Type #{command.prefix}commands to get a list of all the things I can do."
+          @outqueue.send Message.new command.channel, "#{command.user}: I'm yoleaux. Type #{command.prefix}commands to see what I can do, or see http://dpk.io/yoleaux for a quick guide."
         elsif set = set_for(argstr) and help=set.help(cname(argstr))
           @outqueue.send Message.new command.channel, "#{help}"
         else
