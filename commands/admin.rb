@@ -126,11 +126,5 @@ command_set :admin do
       true
     EOF
   end
-  
-  command :core_eval, 'Evaluate some Ruby code in the bot core' do
-    admin_only
-    require_argstr
-    respond core_eval("(#{argstr}).inspect").to_s
-  end
 end
 
