@@ -227,7 +227,7 @@ class Yoleaux
             when ScheduledTask
               @scheduler.inqueue.send [response.time, response]
             when Tell
-              @telldb[response.to.downcase] = @telldb[response.to.downcase].to_a + [response]
+              @telldb[Yoleaux.nick(response.to)] = @telldb[Yoleaux.nick(response.to)].to_a + [response]
             end
           end
         end
@@ -263,27 +263,27 @@ class Yoleaux
     case event.type
     when 'PRIVMSG'
       channel = (event.args[0] == @nick ? event.nick : event.args[0])
-      if event.text.downcase == "#{@nick.downcase}!"
+      if Yoleaux.nick(event.text) == "#{Yoleaux.nick(@nick)}!"
         privmsg channel, "#{event.nick}!"
-      elsif event.text.match(/^#{Regexp.quote @nick}[,:] ping[!?\u203D]*$/i)
+      elsif Yoleaux.nick(event.text).match(/^#{Regexp.quote Yoleaux.nick @nick}[,:] ping[!?\u203D]*$/)
         running = @commands.count {|id, command| command.started? and not command.done? }
         queued = @commands.count {|id, command| not command.started? }
         privmsg channel, "#{event.nick}: pong! (#{queued} queued, #{running} running)"
-      elsif event.text.match(/^#{Regexp.quote @nick}[,:] prefix\??$/i)
+      elsif Yoleaux.nick(event.text).match(/^#{Regexp.quote Yoleaux.nick @nick}[,:] prefix\??$/)
         privmsg channel, "#{event.nick}: My current prefix is \"#@prefix\"."
       elsif m=event.text.match(@@uri_regexp)
         @last_url[channel] = m[1]
       end
       
       if not private_msg? channel, event.nick, event.text
-        @seendb[event.nick.downcase] = [DateTime.now, event.nick, channel, event.text]
+        @seendb[Yoleaux.nick(event.nick)] = [DateTime.now, event.nick, channel, event.text]
       elsif time_loggable? channel
-        @seendb[event.nick.downcase] = [DateTime.now, event.nick, channel]
+        @seendb[Yoleaux.nick(event.nick)] = [DateTime.now, event.nick, channel]
       end
-      if @telldb[event.nick.downcase] and not @telldb[event.nick.downcase].empty?
+      if @telldb[Yoleaux.nick(event.nick)] and not @telldb[Yoleaux.nick(event.nick)].empty?
         begin
           # a hack to get tells to be delivered in order
-          tellcbs = @telldb[event.nick.downcase].map do |tell|
+          tellcbs = @telldb[Yoleaux.nick(event.nick)].map do |tell|
             dispatchable Callback, :name => tell.callback,
                                    :args => tell.args,
                                    :user => event.nick,
@@ -292,7 +292,7 @@ class Yoleaux
           @next_dispatch[tellcbs.first.id] = tellcbs[1..-1]
           dispatch tellcbs.first
         ensure
-          @telldb[event.nick.downcase] = []
+          @telldb[Yoleaux.nick(event.nick)] = []
         end
       end
     when 'PING'
@@ -396,6 +396,11 @@ class Yoleaux
   end
   def time_loggable? channel
     not not (@privacy.has_key? channel and @privacy[channel]['noseen_log_time'])
+  end
+  
+  # normalises a nick according to IRC's casefolding rules
+  def self.nick nick
+    nick.downcase.tr('{}^\\', '[]~|')
   end
   
   private

@@ -6,12 +6,6 @@ paragraph. Take what you read with a pinch of salt.
 
 IRC generally:
 
-Per RFC 2812 §2.2, IRC treats "{}|^" and "[]\~" as equivalent in a
-case-insensitive comparison, such as when comparing two nicknames.
-Yoleaux does not (yet) respect this. (Fix: replace all instances of
-nick.downcase with a special function which does
-nick.downcase.tr('{}|^', '[]\~'))
-
 Phenny uses a hand-hacked parser for IRC lines; Yoleaux just uses a
 regexp, @@linere, which I pinched from loggy.py's source. This seems
 to work well enough: I haven't seen it trip up once yet. Though it

@@ -46,9 +46,9 @@ command_set :general do
     to, message = argstr.split(' ', 2)
     halt(respond "#{env.nick}: I don't know what you want me to say to #{to}.") unless message
     
-    if env.nick.downcase == to.downcase
+    if nick(env.nick) == nick(to)
       halt respond "#{env.nick}: Talking to yourself is the first sign of madness."
-    elsif env.bot_nick == to.downcase
+    elsif nick(env.bot_nick) == nick(to)
       halt respond "#{env.nick}: Thanks for the message."
     end
     
@@ -103,10 +103,10 @@ command_set :general do
   
   command :seen, 'Ask me when I last saw a user speaking' do
     require_argstr
-    seen = db(:seen)[argstr.downcase]
-    if argstr.downcase == env.nick.downcase
+    seen = db(:seen)[nick(argstr)]
+    if nick(argstr) == nick(env.nick)
       respond "You're right there."
-    elsif argstr.downcase == env.bot_nick.downcase
+    elsif nick(argstr) == nick(env.bot_nick)
       respond "I'm right here."
     elsif seen.nil?
       respond "I haven't seen #{argstr} around."

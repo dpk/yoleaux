@@ -106,6 +106,10 @@ class Yoleaux
       @env.out.send Tell.new to, [@name, callback], args
     end
     
+    def nick *args
+      Yoleaux.nick(*args)
+    end
+    
     def db name, val={}
       DatabaseProxy.new(name, val, @env.in, @env.out)
     end
