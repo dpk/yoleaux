@@ -169,6 +169,7 @@ command_set :api do
     
     # considered an API function because it relies on UnicodeData
     def unigrep str
+      cjk_blocks = [0x4E00..0x9FFF, 0x3400..0x4DBF, 0x20000..0x2A6DF, 0x2A700..0x2B73F, 0x2B740..0x2B740]
       File.open('./data/UnicodeData.txt', 'r') do |f|
         matches = []
         f.each_line do |line|
@@ -542,7 +543,7 @@ command_set :api do
     path = "#{uri.path.empty? ? '/' : uri.path}#{'?'+uri.query if uri.query}"
     resp = http.request_head(path)
     if header
-      respond (resp[header] or "Sorry, there was no #{header} header in the response.")
+      respond (resp[header] or "Sorry, there was no #{header} header in the response.")[0...512]
     else
       summary = [resp.code]
       if resp['Content-Type']
@@ -637,7 +638,7 @@ command_set :api do
     end)
     
     if title
-      respond title
+      respond title[0...512]
     else
       respond "#{env.nick}: Sorry, that doesn't appear to be an HTML page."
     end
