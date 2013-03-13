@@ -361,8 +361,13 @@ command_set :api do
         j = JSON.parse(json_src)
         html_src = j['mobileview']['sections'][0]['text']
         h = Nokogiri::HTML(html_src)
-        firstp = (h % 'body > p').inner_text.gsub(/\[(?:(?:nb )?\d+|citation needed|unreliable source\?)\]/, '')
-        gist = (sentence_truncate(firstp, maxlen) or j['mobileview']['normalizedtitle'])
+        firstp = (h % 'body > p')
+        if firstp
+          firstp = firstp.inner_text.gsub(/\[(?:(?:nb )?\d+|citation needed|unreliable source\?)\]/, '')
+          gist = (sentence_truncate(firstp, maxlen) or j['mobileview']['normalizedtitle'])
+        else
+          gist = j['mobileview']['normalizedtitle']
+        end
         
         return OpenStruct.new :url => article_url, :gist => gist
       end
