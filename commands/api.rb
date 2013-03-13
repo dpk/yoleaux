@@ -119,11 +119,13 @@ command_set :api do
     end
     
     def expand_twitter_links text, entities
-      text = text.dup
+      urls = {}
       entities['urls'].each do |url|
-        text[url['indices'][0]...url['indices'][1]] = url['expanded_url']
+        urls[url['url']] = url['expanded_url']
       end
-      text
+      text.gsub(/#{urls.keys.map {|tco| Regexp.quote tco }.join '|'}/) do |m|
+        urls[m]
+      end
     end
     
     def does_follow who, whom
