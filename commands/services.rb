@@ -92,11 +92,13 @@ class Yoleaux
       # todo: better error reportage
       case command[:type]
       when 'oblique'
-        resp = Net::HTTP.get_response URI(command[:uri].gsub(/\$\{(?:nick|args|sender)\}/i) do |m|
+        resp = Net::HTTP.get_response URI(command[:uri].gsub(/\$\{(?:nick|args|argurl|sender)\}/i) do |m|
           if m.downcase.include? 'nick'
             URI.encode(@env.nick, /./)
           elsif m.downcase.include? 'args'
             URI.encode(@env.args.to_s, /./)
+          elsif m.downcase.include? 'argurl'
+            URI.encode((@env.args or @env.last_url).to_s, /./)
           elsif m.downcase.include? 'sender'
             URI.encode(@env.channel, /./)
           end
