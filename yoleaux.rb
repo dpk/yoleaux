@@ -435,8 +435,9 @@ class Yoleaux
     
     # break lines
     msgs = [msg]
+    maxlen = 500 - channel.length
     # todo: configurable max line length
-    while msgs.last.bytesize > 460
+    while msgs.last.bytesize > maxlen
       lastline = msgs.last
       pieces = lastline.split(/\b/)
       newline = ''
@@ -444,7 +445,7 @@ class Yoleaux
       lasti = 0
       pieces.each_with_index do |piece, i|
         lasti = i
-        if (newline.bytesize + piece.bytesize) >= 455
+        if (newline.bytesize + piece.bytesize) >= (maxlen - 5)
           break
         end
         newline << piece
