@@ -189,7 +189,7 @@ command_set :api do
             (mincp..maxcp).include? codepoint.to_i(16)
           when /\A[a-z0-9 \-]+\Z/i
             words = str.split(/\W+/).map(&:downcase)
-            name[0] != '<' and name.match(/#{words.map {|w| "\\b#{Regexp.quote w}\\w*?" }.join '\W'}/i)
+            name[0] != '<' and name.match(/#{words.map {|w| "\\b#{Regexp.quote w}\\w*?" }.join '\W(?:\w*?\W)?'}/i)
           else
             str.include? ('' << codepoint.to_i(16))
           end)
