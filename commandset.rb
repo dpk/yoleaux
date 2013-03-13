@@ -52,6 +52,7 @@ class Yoleaux
     
     def docs command=nil
       if command
+        command = @commands[command] until @commands[command].is_a? Proc
         self.class.command_docs[normalize_command_name(command)]
       else
         docs @env.command
@@ -64,13 +65,13 @@ class Yoleaux
     
     def require_argstr
       if argstr.empty?
-        respond docs
+        respond (docs or "Sorry, that command requires an argument.")
         halt
       end
     end
     def require_argtext
       if argtext.empty?
-        respond docs
+        respond (docs or "Sorry, that command requires an argument.")
         halt
       end
     end
@@ -121,6 +122,8 @@ class Yoleaux
         @commands = {}
         @command_docs = {}
         @callbacks = {}
+        
+        @awaiting_docs = [] # hack hack hack
       end
       
       attr_accessor :name
@@ -129,10 +132,20 @@ class Yoleaux
       def command name, docs=nil, &block
         @commands[normalize_command_name(name)] = block
         @command_docs[normalize_command_name(name)] = docs if docs
+        
+        @awaiting_docs.reject! do |waiter|
+          from, to = waiter
+          if to == normalize_command_name(name)
+            @command_docs[normalize_command_name(from)] = docs if docs
+            true
+          else
+            false
+          end
+        end
       end
       def alias_command from, to
         @commands[normalize_command_name(from)] = normalize_command_name(to)
-        @command_docs[normalize_command_name(from)] = @command_docs[normalize_command_name(to)]
+        @command_docs[normalize_command_name(from)] = @command_docs[normalize_command_name(to)] or (@awaiting_docs << [normalize_command_name(from), normalize_command_name(to)])
       end
       
       def command_list
