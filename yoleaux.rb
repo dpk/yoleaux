@@ -418,7 +418,6 @@ class Yoleaux
   
   def privmsg channel, prefix=nil, msg
     msg = fix_encoding msg
-    msg = "#{"#{prefix} " if prefix}#{msg.to_s}"
     # loop prevention. a mechanism like Delivered-To would be useful here, IRC!
     if @last_msgs.count([channel, msg]) > 4
       if @last_msgs.count([channel, '...']) > 2
@@ -435,7 +434,7 @@ class Yoleaux
     
     # break lines
     msgs = [msg]
-    maxlen = 500 - channel.length
+    maxlen = 499 - channel.length - prefix.to_s.bytesize
     # todo: configurable max line length
     while msgs.last.bytesize > maxlen
       lastline = msgs.last
@@ -465,7 +464,7 @@ class Yoleaux
       end
     end
     msgs.each do |msg|
-      send 'PRIVMSG', [channel], msg
+      send 'PRIVMSG', [channel], "#{prefix} #{msg}"
     end
   end
   def send command, params=[], text=nil
