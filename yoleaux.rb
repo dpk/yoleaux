@@ -434,7 +434,7 @@ class Yoleaux
     
     # break lines
     msgs = [msg]
-    maxlen = 499 - channel.length - prefix.to_s.bytesize
+    maxlen = 460 - channel.length - prefix.to_s.bytesize
     # todo: configurable max line length
     while msgs.last.bytesize > maxlen
       lastline = msgs.last
@@ -450,8 +450,9 @@ class Yoleaux
         newline << piece
       end
       if lasti == 0
-        newline = lastline.force_encoding('binary')[0...455].force_encoding('utf-8') + " \u2026"
-        lastline = lastline.force_encoding('utf-8')[455..-1]
+        len = 0
+        newline = lastline.each_char.take_while {|c| (len += c.bytesize) <= (maxlen - 20) }.join + " \u2026"
+        lastline = lastline[(newline.length-2)..-1]
         msgs[-1] = newline
         msgs << lastline
       elsif lasti < pieces.length - 1
