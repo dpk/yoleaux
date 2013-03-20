@@ -51,6 +51,7 @@ class Yoleaux
     @telldb = Database.new :tell, {}
     
     trap('INT')  { @spw.write_nonblock STOPSIG }
+    trap('TERM') { @spw.write_nonblock STOPSIG }
     trap('CHLD') { @spw.write_nonblock CHLDSIG }
     
     handle_loop
