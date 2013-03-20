@@ -439,7 +439,7 @@ class Yoleaux
     
     # break lines
     msgs = [msg]
-    maxlen = 499 - @address.length - channel.length - prefix.to_s.bytesize
+    maxlen = 498 - @address.length - channel.length - (prefix ? (prefix.bytesize + 1) : 0)
     # todo: configurable max line length
     while msgs.last.bytesize > maxlen
       lastline = msgs.last
