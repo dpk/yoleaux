@@ -39,6 +39,7 @@ class Yoleaux
     @last_msgs = []
     @stopasap = false
     @reloading = false
+    @address = "#@nick!#@user@yoleaux/default"
     @socket = TCPSocket.new @server, @port
     start_processes
     send 'NICK', [], @nick
@@ -297,6 +298,10 @@ class Yoleaux
       end
     when 'PING'
       send 'PONG', [@nick], event.text
+    when 'JOIN'
+      if Yoleaux.nick(event.nick) == Yoleaux.nick(@nick)
+        @address = event.user
+      end
     when '251'
       @channels.each_slice(3) {|channels| join channels }
       if @nickpass
@@ -434,7 +439,7 @@ class Yoleaux
     
     # break lines
     msgs = [msg]
-    maxlen = 460 - channel.length - prefix.to_s.bytesize
+    maxlen = 499 - @address.length - channel.length - prefix.to_s.bytesize
     # todo: configurable max line length
     while msgs.last.bytesize > maxlen
       lastline = msgs.last
@@ -465,7 +470,7 @@ class Yoleaux
       end
     end
     msgs.each do |msg|
-      send 'PRIVMSG', [channel], "#{prefix} #{msg}"
+      send 'PRIVMSG', [channel], "#{"#{prefix} " if prefix}#{msg}"
     end
   end
   def send command, params=[], text=nil
