@@ -1,6 +1,7 @@
 
 require 'digest/sha2'
 require 'time'
+require 'tzinfo'
 
 command_set :general do
   helpers do
@@ -22,36 +23,51 @@ command_set :general do
       end
       secs
     end
-    
+   
     def set_reminder &parser
-	  require_argstr
-	  time, message = argstr.split(' ', 2)
-	  time = parser.call time
-	  schedule time, :remind, env.channel, env.nick, message
-	  alerttime = (time.is_a?(Numeric) ? (Time.now + time) : time)
-	  respond "#{env.nick}: I'll remind you #{(alerttime.to_date != Time.now.to_date) ? 'on' : 'at'} #{format_time alerttime}"
+      require_argstr
+      time, message = parser.call argstr
+      schedule time, :remind, env.channel, env.nick, message
+      alerttime = (time.is_a?(Numeric) ? (Time.now + time) : time)
+      respond "#{env.nick}: I'll remind you #{(alerttime.to_date != Time.now.to_date) ? 'on' : 'at'} #{format_time alerttime}"
     end
-    
+   
     def format_time time
-      [((time.to_date != Time.now.to_date) ? time.strftime('%e %b %Y') : nil), time.strftime('%H:%M %Z')].compact.join(' ').sub(' +00:00', 'Z').strip
+      tz = (current_timezone || utc)
+      (if tz.now.to_date == tz.utc_to_local(time).to_date
+        tz.strftime("%H:%M %Z", time)
+      else
+        tz.strftime("%e %b %Y %H:%M %Z", time).strip
+      end).sub(/ (?:UTC|GMT)$/, 'Z')
+    end
+   
+    def utc; TZInfo::Timezone.get('UTC'); end
+    def current_timezone user=nil
+      tzdb = db(:timezones)
+      begin
+        pref = tzdb[nick(user || env.nick)]
+        TZInfo::Timezone.get(pref)
+      rescue
+        nil
+      end
     end
   end
-  
+ 
   command :ping, 'There is no ping command' do
     respond "#{docs}; nor can this be construed as a response."
   end
-  
+ 
   command :to, 'Relay a telegram to someone' do
     require_argstr
     to, message = argstr.split(' ', 2)
     halt(respond "#{env.nick}: I don't know what you want me to say to #{to}.") unless message
-    
+   
     if nick(env.nick) == nick(to)
       halt respond "#{env.nick}: Talking to yourself is the first sign of madness."
     elsif nick(env.bot_nick) == nick(to)
       halt respond "#{env.nick}: Thanks for the message."
     end
-    
+   
     on_next_message to, :relay_message, env.channel, DateTime.now, env.nick, message
     respond "#{env.nick}: I'll pass your message to #{to}."
   end
@@ -60,20 +76,57 @@ command_set :general do
   callback :relay_message do |channel, msgtime, from, message|
     send env.channel, "#{format_time msgtime} <#{from}> #{env.nick}: #{message}"
   end
-  
+ 
   command(:botsnack, 'Give me a snack pls') { respond ':D' }
-  
+ 
   command :msg, 'Send a message to a channel' do
     admin_only
     require_argstr
     channel, message = argstr.split ' ', 2
     send channel, message
   end
-  
+ 
   command :t, 'Get the current time' do
-    respond DateTime.now.rfc2822
+    format = '%a, %d %b %Y %H:%M:%S %Z'
+    if argstr.empty?
+      if tz=current_timezone
+        respond tz.strftime(format)
+      else
+        respond utc.strftime(format)
+      end
+    else
+      tz = (TZInfo::Timezone.get(argstr) rescue nil)
+      if tz
+        respond tz.strftime(format)
+      else
+        respond "#{env.nick}: Sorry, I don't know a timezone by that name."
+      end
+    end
   end
-  
+ 
+  command :tz, 'Get or set your current timezone' do
+    tzdb = db(:timezones)
+    who = nick(env.nick)
+    if argstr.empty?
+      tzname = tzdb[who]
+      if tzname.nil?
+        respond "#{env.nick}: I don't currently have a timezone preference set for you."
+      else
+        tz = TZInfo::Timezone.get(tzname)
+        respond "#{env.nick}: Your timezone setting is #{tzname}, currently #{tz.strftime("%Z")}."
+      end
+    else
+      tzname = argstr
+      tz = (TZInfo::Timezone.get(tzname) rescue nil)
+      if tz
+        tzdb[who] = tzname
+        respond "#{env.nick}: Changed your timezone to #{tzname}. (Current date and time: #{tz.strftime("%Y-%m-%d %H:%M:%S")})"
+      else
+        respond "#{env.nick}: Sorry, I don't know what timezone that is. See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of options."
+      end
+    end
+  end
+ 
   command :supercombiner, 'TEH SUPARCOMBINOR' do
     admin_only # to prevent spam
     respond ("u\xCC\x80\xCC\x81\xCC\x82\xCC\x83\xCC\x84\xCC\x85"+
@@ -94,13 +147,13 @@ command_set :general do
               "\xCD\x9A\xCD\x9B\xCD\x9C\xCD\x9D\xCD\x9E\xCD\x9F"+
               "\xCD\xA0\xCD\xA1\xCD\xA2\xCD\xA3").force_encoding('utf-8')
   end
-  
+ 
   command :bytes, 'Show bytes of the input string' do
     type = (switches.first or 'hex')
     fmtmap = {'hex' => '%02x', 'oct' => '%04o', 'dec' => '%d'}
     respond argtext.bytes.map {|b| sprintf (fmtmap[type] or "%02x"), b }.join ' '
   end
-  
+ 
   command :seen, 'Ask me when I last saw a user speaking' do
     require_argstr
     seen = db(:seen)[nick(argstr)]
@@ -113,18 +166,18 @@ command_set :general do
     else
       time, nick, channel, message = seen
       if message
-		if m=message.match(/\A\x01ACTION (.*)\x01\Z/)
-		  message = ": * #{nick} #{m[1]}"
-		else
-		  message = ": <#{nick}> #{message}"
-		end
-	  else
-	    message = '.'
-	  end
+        if m=message.match(/\A\x01ACTION (.*)\x01\Z/)
+          message = ": * #{nick} #{m[1]}"
+        else
+          message = ": <#{nick}> #{message}"
+        end
+      else
+        message = '.'
+      end
       respond "I saw #{nick} #{format_time time} in #{channel}#{message}"
     end
   end
-  
+ 
   command :pick, 'Makes a decision from multiple options for you. (The author of this bot cannot be held liable for the consequences of using this command)' do
     require_argstr
     choices = argstr.split(argstr.include?(';') ? ';' : ',').map {|opt| opt.strip }.uniq.sort
@@ -133,34 +186,75 @@ command_set :general do
     respond choices[hash % choices.length]
   end
   alias_command :choose, :pick
-  
+ 
   command :at, 'Set a reminder for yourself at a certain date and/or time' do
     set_reminder do |tstr|
-      begin
-        raise ArgumentError unless tstr.include?(':') or tstr.include?('-')
-        time = DateTime.iso8601(tstr.dup) # fuck Ruby
-      rescue ArgumentError
+      m = tstr.match(
+        /\A
+          (?:
+            (?<justtime>
+              (?<jhour>\d{2}):(?<jmin>\d{2})(?::(?<jsec>\d{2}))?
+            )
+          |
+            (?<date>(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2}))
+            (?:
+              [\sT]
+              (?<time>(?<hour>\d{2}):(?<min>\d{2})(?::(?<sec>\d{2}))?)
+              (?<offset>(?<offsetdir>[+\-])(?<offseth>\d\d):?(?<offsetm>\d\d)|Z)?
+            )?
+          )
+          (?:
+            \s
+            (?<message>.*)
+          )?
+          \Z
+        /xi
+      )
+      if m.nil?
         halt respond "#{env.nick}: Sorry, I don't understand that date/time."
       end
-      if not tstr.include? ':'
-        time += (DateTime.now - Date.today)
-      elsif not tstr.include? '-' and time < DateTime.now
-        time += 1
+      if m[:justtime]
+        now = current_timezone.now
+        time = Time.utc(now.year, now.month, now.day, 0, 0, 0)
+        time += m[:jhour].to_i * 3600
+        time += m[:jmin].to_i  * 60
+        time += m[:jsec].to_i
+        time += 86400 if time < now
+        time = current_timezone.local_to_utc time
+      else
+        time = Time.utc(m[:year].to_i, m[:month].to_i, m[:day].to_i, m[:hour].to_i, m[:min].to_i, m[:sec].to_i) rescue (halt respond "#{env.nick}: Sorry, that's not a valid date/time.")
+        if not m[:time]
+          now = current_timezone.now
+          time += now.hour * 3600
+          time += now.min * 60
+          time += now.sec
+        end
+        if m[:offset]
+          if m[:offseth]
+            offsecs = (m[:offseth].to_i*3600)+(m[:offsetm].to_i*60)
+            offsecs *= -1 if m[:offsetdir] == '-'
+            time += offsecs
+          end
+        else
+          time = current_timezone.local_to_utc time
+        end
       end
-      if time < DateTime.now
+      
+      if time < Time.now.utc
         halt respond "#{env.nick}: Sorry, I can't deliver reminders to the past."
       end
-      time
+      [time, m[:message]]
     end
   end
   alias_command :on, :at
   command :in, 'Set a reminder for yourself in a certain amount of time' do
     set_reminder do |tstr|
+      time, message = tstr.split(' ')
       time = parse_time_interval tstr
-	  if time.zero?
-		halt respond "#{env.nick}: Sorry, I don't understand your duration. Try using units: 1h30m, 1d, etc."
-	  end
-	  time
+      if time.zero?
+        halt respond "#{env.nick}: Sorry, I don't understand your duration. Try using units: 1h30m, 1d, etc."
+      end
+      [time, message]
     end
   end
   callback :remind do |channel, nick, message|
@@ -170,7 +264,7 @@ command_set :general do
       "#{nick}!"
     end)
   end
-  
+ 
   command :buck, 'Is it BUCK yet?' do
     today = Date.today
     start = Date.new(2013,8,23)
@@ -183,7 +277,7 @@ command_set :general do
       respond "It's gone for 2013! What about 2014 ...?"
     end
   end
-  
+ 
   # command(:o, ':O') { respond ':O' }
 end
 
