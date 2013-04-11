@@ -249,7 +249,7 @@ command_set :general do
   alias_command :on, :at
   command :in, 'Set a reminder for yourself in a certain amount of time' do
     set_reminder do |tstr|
-      time, message = tstr.split(' ')
+      time, message = tstr.split(' ', 2)
       time = parse_time_interval tstr
       if time.zero?
         halt respond "#{env.nick}: Sorry, I don't understand your duration. Try using units: 1h30m, 1d, etc."
