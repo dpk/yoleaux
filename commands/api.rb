@@ -177,6 +177,7 @@ command_set :api do
         f.each_line do |line|
           char = line.chomp.split(';')
           codepoint, name, category, ccc, direction, decomp, dec, digit, num, mirror, oldname, comment, upcase, downcase, tcase = char
+          next if (0xD800..0xDFFF).include? codepoint.to_i(16)
           
           # THIS IS NOT THREAD-SAFE
           # (but then again, nothing is ...)
@@ -187,9 +188,10 @@ command_set :api do
             mincp = $~[1].to_i(16)
             maxcp = $~[2].to_i(16)
             (mincp..maxcp).include? codepoint.to_i(16)
-          when /\A[a-z0-9 \-]+\Z/i
+          when /\A[a-z0-9 \-]{2,}\Z/i
             words = str.split(/\W+/).map(&:downcase)
-            name[0] != '<' and name.match(/#{words.map {|w| "\\b#{Regexp.quote w}\\w*?" }.join '\W(?:\w*?\W)?'}/i)
+            re = /#{words.map {|w| "\\b#{Regexp.quote w}\\w*?" }.join '\W(?:\w*?\W)?'}/i
+            name[0] != '<' and name.match(re) or (oldname and oldname.match(re))
           else
             str.include? ('' << codepoint.to_i(16))
           end)
@@ -690,7 +692,7 @@ command_set :api do
       response << unicode_display(char)
       response << ')'
       respond response
-      break if name.downcase == argstr.downcase # exact name match? only show one
+      break if name == argstr.upcase or oldname == argstr.upcase # exact name match? only show one
     end
   end
   
