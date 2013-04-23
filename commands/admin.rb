@@ -33,6 +33,7 @@ command_set :admin do
     require_argstr
     raw_send 'NICK', [], argstr
     core_eval <<-EOF
+      @address[0...(@address.index '!')] = @nick
       @nick = command.args
       write_config
     EOF
