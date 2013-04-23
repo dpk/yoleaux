@@ -61,8 +61,10 @@ command_set :general do
     require_argstr
     to, message = argstr.split(' ', 2)
     halt(respond "#{env.nick}: I don't know what you want me to say to #{to}.") unless message
-   
-    if nick(env.nick) == nick(to)
+    
+    if not nick(to).match(/\A[A-Za-z\x5B-\x60\x7B-\x7D][A-Za-z0-9\x5B-\x60\x7B-\x7D-]{,17}\Z/)
+      halt respond "#{env.nick}: What kind of a name is \"#{to}\"?!"
+    elsif nick(env.nick) == nick(to)
       halt respond "#{env.nick}: Talking to yourself is the first sign of madness."
     elsif nick(env.bot_nick) == nick(to)
       halt respond "#{env.nick}: Thanks for the message."
