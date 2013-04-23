@@ -381,6 +381,7 @@ command_set :api do
       out.source = uri.to_s
       src = Net::HTTP.get uri
       h = Nokogiri::HTML(src)
+      out.headword = ((h % 'dt.highlight > a') or return nil).inner_text.strip
       text = ((h % 'dd.highlight') or return nil).inner_text
       out.gist = sentence_truncate text, 250
       out
@@ -389,7 +390,13 @@ command_set :api do
     def sentence_truncate text, maxlen=250
       begin
         gist = ''
-        sentences = text.split(/(?<=\. )/)
+        abbrs = ["cf", "lit", "etc", "Ger", "Du", "Skt", "Rus", "Eng", "Amer.Eng",
+                 "Sp", "Fr", "N", "E", "S", "W", "L", "Gen", "J.C", "dial", "Gk",
+                 "19c", "18c", "17c", "16c", "St", "Capt", "obs", "Jan", "Feb",
+                 "Mar", "Apr", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "c", "tr",
+                 "e", "g"]
+        re = /(?<=(?<!#{abbrs.map {|a| Regexp.quote a }.join '|'})\. )/
+        sentences = text.split(re)
         if sentences.first.length > maxlen
           gist = sentences.first.match(/^(.{,#{maxlen-10}}\W)/)[1] + " \u2026"
         else
@@ -487,7 +494,7 @@ command_set :api do
     require_argstr
     result = etymology(argstr)
     if result
-      respond "\"#{result.gist.strip}\" \u2014 #{result.source}"
+      respond "#{result.headword}: \"#{result.gist.strip}\" \u2014 #{result.source}"
     else
       respond "Sorry, I couldn't find the etymology of that."
     end
