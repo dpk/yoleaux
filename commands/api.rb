@@ -107,27 +107,6 @@ command_set :api do
       supstr
     end
     
-    def tweet_with_id id
-      uri = URI "http://api.twitter.com/1/statuses/show/#{id}.json?include_entities=t"
-      src = Net::HTTP.get(uri)
-      tweet = JSON.parse src
-    end
-    def tweet_from_user name
-      uri = URI "http://api.twitter.com/1/statuses/user_timeline.json?screen_name=#{URI.encode name}&count=1&include_entities=t"
-      src = Net::HTTP.get(uri)
-      tweet = JSON.parse(src).first
-    end
-    
-    def expand_twitter_links text, entities
-      urls = {}
-      entities['urls'].each do |url|
-        urls[url['url']] = url['expanded_url']
-      end
-      text.gsub(/#{urls.keys.map {|tco| Regexp.quote tco }.join '|'}/) do |m|
-        urls[m]
-      end
-    end
-    
     def does_follow who, whom
       h = Nokogiri::HTML Net::HTTP.get URI "http://doesfollow.com/#{URI.encode who}/#{URI.encode whom}"
       if h % '.yup'
@@ -668,23 +647,6 @@ command_set :api do
     text = argtext
     result = translate from, to, text
     respond "#{result.translation} (#{result.from} \u2192 #{result.to})"
-  end
-  
-  command :tw, 'Show a tweet by ID or URL; or get the latest tweet from a user' do
-    require_argstr unless env.last_url.to_s.include? 'twitter.com/'
-    arg = (argstr.empty? ? env.last_url : argstr)
-    tweet = (
-      if arg.match(/^\d+$/)
-        tweet_with_id argstr
-      elsif arg.match(/^https?:/)
-        tweet_with_id arg.match(/(\d+)\/?$/)[1]
-      else arg
-        tweet_from_user arg.sub('@', '')
-      end
-    )
-    
-    text = expand_twitter_links tweet['text'], tweet['entities']
-    respond "#{entities text.gsub(/[[:space:]]+/, ' ')} (@#{tweet['user']['screen_name']})"
   end
   
   command :u, 'Search for a Unicode character by codepoint, name, or raw character' do
