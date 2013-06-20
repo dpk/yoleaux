@@ -605,7 +605,7 @@ command_set :api do
   
   command :py, 'Evaluate an expression in Python' do
     require_argstr
-    respond Net::HTTP.get(URI "http://tumbolia.appspot.com/py/#{URI.encode argstr, /./}")
+    respond Net::HTTP.get(URI "http://tumbolia.appspot.com/py/#{URI.encode argstr, /./}")[0...400]
   end
   
   command :rfc, 'Get a link and title for an RFC or another IETF document' do
