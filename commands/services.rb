@@ -40,6 +40,9 @@ class Yoleaux
         if @@commands.has_key? name and not @@commands[name][:owner] == @env.nick
           respond 'Sorry, that command name is already taken.'
         else
+          if type == 'oblique-multi' and not @env.admin
+            respond 'Sorry, only admins may add multi-line commands.'
+          end
           @@commands[name] = {:uri => uri, :type => type, :owner => @env.nick}
           self.class.save_commands_list
           respond "Added command #{name}: #{type} service. (Please add a help string with \"#{@env.prefix}command-help #{name} ...\")"
@@ -91,27 +94,52 @@ class Yoleaux
     def run_command command, prepend=''
       # todo: better error reportage
       case command[:type]
-      when 'oblique'
-        resp = Net::HTTP.get_response URI(command[:uri].gsub(/\$\{(?:nick|args|argurl|sender)\}/i) do |m|
-          if m.downcase.include? 'nick'
-            URI.encode(@env.nick, /./)
+      when 'oblique', 'oblique-multi'
+        resp = Net::HTTP.get_response URI(command[:uri].gsub(/\$\{(nick|args|argurl|sender)(?:\*(\d+))?\}/i) do |m|
+          param = $~[1].downcase
+          nescape = ($~[2] ? $~[2].to_i : 1)
+          subst = nil
+          if param == 'nick'
+            subst = @env.nick
           elsif m.downcase.include? 'args'
-            URI.encode(@env.args.to_s, /./)
+            subst = @env.args.to_s
           elsif m.downcase.include? 'argurl'
-            URI.encode((@env.args or @env.last_url).to_s, /./)
+            subst = (@env.args or @env.last_url).to_s
           elsif m.downcase.include? 'sender'
-            URI.encode(@env.channel, /./)
+            subst = @env.channel
           end
+          nescape.times do
+            subst = URI.escape subst, /./
+          end
+          subst
         end)
         if not resp['Content-Type'].downcase.include? 'text/plain'
           return respond "#{@env.nick}: Sorry: that command is a web-service, but it didn't respond in plain text."
-        elsif (lines=resp.body.rstrip.lines.to_a).length > 1 or lines.first.bytesize > (500-prepend.bytesize)
-          return respond "#{@env.nick}: Sorry: that command is a web-service, but its response was too long."
         else
-          response = "#{prepend}#{lines.first}"
-          response.force_encoding('utf-8')
-          response.force_encoding('iso-8859-1').encode!('utf-8') if not response.valid_encoding?
-          respond response
+          if command[:type] == 'oblique'
+            if (lines=resp.body.rstrip.lines.to_a).length > 1 or lines.first.bytesize > (500-prepend.bytesize)
+              return respond "#{@env.nick}: Sorry: that command is a web-service, but its response was too long."
+            else
+              response = "#{prepend}#{lines.first}"
+              response.force_encoding('utf-8')
+              response.force_encoding('iso-8859-1').encode!('utf-8') if not response.valid_encoding?
+              respond response
+            end
+          elsif command[:type] == 'oblique-multi'
+            lines = resp.body
+            lines.force_encoding('utf-8')
+            lines.force_encoding('iso-8859-1').encode!('utf-8') if not lines.valid_encoding?
+            lines = lines.rstrip.lines.to_a
+            first = true
+            lines.each do |line|
+              if first
+                respond "#{prepend}#{line}"
+              else
+                first = false
+                respond line
+              end
+            end
+          end
         end
 #       when 'yoleaux'
 #         query = {nick: @env.nick,
