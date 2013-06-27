@@ -274,7 +274,7 @@ class Yoleaux
       elsif Yoleaux.nick(event.text).match(/^#{Regexp.quote Yoleaux.nick @nick}[,:] prefix\??$/)
         privmsg channel, "#{event.nick}: My current prefix is \"#@prefix\"."
       elsif m=event.text.scan(@@uri_regexp).last
-        @last_url[channel] = m
+        @last_url[channel] = m.first
       end
       
       if not private_msg? channel, event.nick, event.text
@@ -434,7 +434,7 @@ class Yoleaux
       end
     end
     if m=msg.scan(@@uri_regexp).last
-      @last_url[channel] = m
+      @last_url[channel] = m.first
     end
     @last_msgs.unshift [channel, msg]
     
