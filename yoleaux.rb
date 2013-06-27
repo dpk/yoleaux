@@ -273,8 +273,8 @@ class Yoleaux
         privmsg channel, "#{event.nick}: pong! (#{queued} queued, #{running} running)"
       elsif Yoleaux.nick(event.text).match(/^#{Regexp.quote Yoleaux.nick @nick}[,:] prefix\??$/)
         privmsg channel, "#{event.nick}: My current prefix is \"#@prefix\"."
-      elsif m=event.text.match(@@uri_regexp)
-        @last_url[channel] = m[1]
+      elsif m=event.text.scan(@@uri_regexp).last
+        @last_url[channel] = m
       end
       
       if not private_msg? channel, event.nick, event.text
@@ -433,8 +433,8 @@ class Yoleaux
         msg = '...'
       end
     end
-    if m=msg.match(@@uri_regexp)
-      @last_url[channel] = m[1]
+    if m=msg.scan(@@uri_regexp).last
+      @last_url[channel] = m
     end
     @last_msgs.unshift [channel, msg]
     
