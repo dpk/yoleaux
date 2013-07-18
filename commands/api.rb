@@ -261,7 +261,7 @@ command_set :api do
       content = (h % '#mainContent')
       out = OpenStruct.new
       out.url = resp['Location']
-      out.entry = (content % 'h1.entryTitle').children.first.inner_text
+      out.entry = (content % 'h2.entryTitle').inner_text
       out.homograph = ((content % 'h1.entryTitle span.homograph').inner_text.strip rescue nil)
       out.pronunciation = ((content % 'div.entryPronunciation a').inner_text.strip rescue nil)
       out.senses = []
@@ -680,7 +680,7 @@ command_set :api do
     maxsenselen = 200
     result = dict argstr
     halt respond("Sorry, I couldn't find a definition for '#{argstr}'.") if result.nil?
-    url = result.url.gsub(/\?q=(.+)$/, '')
+    url = shorten_url result.url.gsub(/\?q=(.+)$/, '')
     maxlen -= url.length
     
     senseabbrs = {'noun' => 'n.', 'verb' => 'v.', 'adjective' => 'adj.', 'adverb' => 'adv.', 'exclamation' => 'excl.', 'preposition' => 'prep.', 'abbreviation' => 'abbr.'}
