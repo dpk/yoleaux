@@ -273,7 +273,7 @@ command_set :general do
     stops = Date.new(2013,8,25)
     if today < start
       respond "Not yet! Only #{(Date.new(2013,8,23) - Date.today).to_i} days to go!"
-    elsif (today > start) and (today < stops)
+    elsif (today >= start) and (today <= stops)
       respond "It's here! Check't out! http://buckcon.org/"
     else
       respond "It's gone for 2013! What about 2014 ...?"
