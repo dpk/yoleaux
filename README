@@ -22,6 +22,12 @@ modular(-ish) preforking architecture and is generally steamin' cool.
                     ||----w |
                     ||     ||
 
+Yoleaux requires the Nokogiri XML parsing library and the tzinfo and
+tzinfo-data libraries for user-specific timezone information. Use
+"gem install nokogiri tzinfo tzinfo-data" to install these before
+running Yoleaux. (Nokogiri in turn depends on having libxml2 installed
+on your system.)
+
 Assuming that you've downloaded the bot, which can be done from this
 'ere link: <http://dpk.io/yoleaux.tar.gz> -- the process of installing
 it is actually quite simple. Having unpacked that archive, you should
@@ -49,9 +55,7 @@ a pipe to write them to a file.
                                       | w----||                    
                                       ||     ||
 
-Ah, I see. Yoleaux currently supports only a small subset of the
-commands it will hopefully someday support. Here's a quick overview of
-the most useful commands that work so far:
+Here's a summary of some of the commands available in Yoleaux by default:
 
     command       what in the heck it does
 
@@ -63,6 +67,8 @@ the most useful commands that work so far:
     in            Sets a reminder for you
     to/tell/ask   Sends a message to someone when they're next available
     u             Searches for a Unicode character
+
+A complete list is available at <http://dpk.io/yoleaux>.
 
 There's also a very nifty services system, whereby any user of the bot
 can add their own commands, provided that they don't trample on any
@@ -162,4 +168,5 @@ original Python code for Phenny and Duxlot. dpk also owes Noah Slater a
 megathank for complaining at him about things which are broken / changed
 compared to Phenny and Duxlot, which he undoubtedly will do. Noah also
 inadvertently named the bot. I must also credit Noah, Matt Read, Mark E.
-Shoulson, Björn Höhrmann and Aaron Mathews for helping me to debug.
+Shoulson, Björn Höhrmann, Aaron Mathews, and Albert Kult for helping me
+to debug.
