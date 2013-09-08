@@ -21,7 +21,7 @@ class Yoleaux
       trap(:INT) { }
       
       loop do
-        timetillnext = (@schedule.empty? ? nil : (@schedule.first.first - Time.now))
+        timetillnext = (@schedule.empty? ? 1800 : (@schedule.first.first - Time.now))
         
         if not timetillnext.nil? and timetillnext < 0
           do_tasks
