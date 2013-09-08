@@ -204,32 +204,23 @@ command_set :api do
     end
     
     def translate from='auto', to='en', text
-      uri = URI "http://translate.google.com/translate_a/t"
+      uri = URI "http://translate.google.com/"
       http = Net::HTTP.new(uri.host)
       params = {
-        "client" => "t",
-        "hl" => "en",
         "sl" => from.downcase,
         "tl" => to.downcase,
-        "multires" => "1",
-        "otf" => "1",
-        "ssel" => "0",
-        "tsel" => "0",
-        "uptl" => "en",
-        "sc" => "1",
+        "js" => "n",
+        "prev" => "_t",
+        "hl" => "en",
+        "ie" => "UTF-8",
         "text" => text
       }
-      uri.query = URI.encode_www_form(params)
-      response = http.request_get(uri.path+'?'+uri.query, {'User-Agent' => 'Mozilla/5.0'})
-      src = response.body
-      src.gsub!(',,', ',null,') while src.include? ',,'
-      jsonsrc = JSON.parse(src)
-      if jsonsrc.length > 2
-        from = jsonsrc[2]
-      else
-        from = '?'
-      end
-      translation = jsonsrc[0].map(&:first).join.gsub(' ,', ',')
+      response = http.request_post(uri.path, URI.encode_www_form(params), {'User-Agent' => 'Mozilla/5.0'})
+      h = Nokogiri::HTML response.body
+      translation = (h % '#result_box').inner_text
+      from = (h % '#nc_dl')['value']
+      from = (h % '#nc_sl')['value'] if from.empty?
+      to = (h % '#nc_tl')['value']
       return OpenStruct.new :from => from, :to => to, :translation => translation
     end
     
