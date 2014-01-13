@@ -243,13 +243,13 @@ command_set :api do
     end
     
     def dict term
-      resp = Net::HTTP.get_response(URI "http://oxforddictionaries.com/search/english/?direct=1&multi=1&q=#{URI.encode term}")
+      resp = Net::HTTP.get_response(URI "http://www.oxforddictionaries.com/search/english/?direct=1&multi=1&q=#{URI.encode term}")
       if resp['Location'].include? '.com/spellcheck/'
         return nil
       end
       src = Net::HTTP.get(URI resp['Location'])
       h = Nokogiri::HTML(src)
-      content = (h % '#mainContent')
+      content = (h % '#ContentBox')
       out = OpenStruct.new
       out.url = resp['Location']
       out.entry = (content % 'h2.entryTitle').inner_text
