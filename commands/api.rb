@@ -249,21 +249,24 @@ command_set :api do
       end
       src = Net::HTTP.get(URI resp['Location'])
       h = Nokogiri::HTML(src)
-      content = (h % '#ContentBox')
+      content = (h % '.entryPageContent')
       out = OpenStruct.new
       out.url = resp['Location']
-      out.entry = (content % 'h2.entryTitle').inner_text
-      out.homograph = ((content % 'h1.entryTitle span.homograph').inner_text.strip rescue nil)
-      out.pronunciation = ((content % 'div.entryPronunciation a').inner_text.strip rescue nil)
+      out.entry = (content % 'h2.pageTitle').inner_text
+      out.homograph = ((content % 'h2.pageTitle span.homograph').inner_text.strip rescue nil)
+      if out.homograph
+        out.entry = out.entry[0...-(out.homograph.length)]
+      end
+      out.pronunciation = ((content % 'div.headpron').inner_text.strip[15..-1].gsub("\u00A0", ' ').gsub(/\s{2,}/, '').gsub(' ,', ', ').gsub(' /', '/') rescue nil)
       out.senses = []
       content.search('section.senseGroup').each do |sg|
         sense = OpenStruct.new
-        sense.word_type = ((sg % 'span.partOfSpeech').inner_text rescue nil)
+        sense.word_type = ((sg % 'span.partOfSpeech').inner_text rescue nil).strip
         sense.inflections = sg.search('span.inflection').map(&:inner_text)
         sense.meanings = []
         sg.search('ul.sense-entry').each do |se|
           entry = OpenStruct.new
-          entry.definition = (se % 'li.sense span.definition').inner_text
+          entry.definition = (se % 'li.sense span.definition').inner_text.strip
           entry.examples = se.search('li.sense em.example').map {|ex| ex.inner_text.strip }
           entry.subsenses = se.search('li.subSense').map {|ss| OpenStruct.new(:definition => (ss % 'span.definition').inner_text, :examples => ss.search('em.example').map(&:inner_text)) }
           sense.meanings << entry
@@ -684,7 +687,11 @@ command_set :api do
         senseresp << "(#{sense.inflections.join ', '}) "
       end
       sense.meanings.each_with_index.map do |meaning, i|
-        meaningresp = "#{"#{i+1}. " if sense.meanings.length > 1}#{dict_truncate meaning.definition.gsub(/[\.:]$/, '')}#{": #{meaning.examples.first}" unless meaning.examples.empty? or (meaning.definition.length + (meaning.examples.first || '').length) >= (maxsenselen - 4)}; "
+        example = ": #{meaning.examples.first}" unless (meaning.examples.empty? or (meaning.definition.length + (meaning.examples.first || '').length) >= (maxsenselen - 4))
+        if example and result.entry.length > 3
+          example = example.gsub(/\b#{Regexp.quote result.entry}/, "\u2053")
+        end
+        meaningresp = "#{"#{i+1}. " if sense.meanings.length > 1}#{dict_truncate meaning.definition.gsub(/[\.:]$/, '')}#{example}; "
         if (senseresp.length + meaningresp.length) > maxsenselen
           break
         else
