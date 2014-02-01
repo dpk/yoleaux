@@ -80,15 +80,6 @@ command_set :api do
       end
     end
     
-    def google_calculator query
-      result = YAML.load (Net::HTTP.get URI "http://www.google.com/ig/calculator?q=#{URI.encode query, /./}").gsub("\xA0".force_encoding('binary'), ' ')
-      result['lhs'] = entities result['lhs'].force_encoding('iso-8859-1')
-      result['rhs'] = entities result['rhs'].force_encoding('iso-8859-1')
-      result['rhs'] = result['rhs'].gsub(%r{<sup>(.*?)</sup>}) do
-        superscript $1
-      end
-      result
-    end
     def superscript str
       base = 0x2070
       special = {'1' => "\u00B9", '2'=>"\u00B2", '3' => "\u00B3", '(' => "\u207D", ')' => "\u207E", '-' => "\u207B", '+' => "\u207A"}
@@ -436,11 +427,13 @@ command_set :api do
   
   command :c, 'Query Google Calculator' do
     require_argstr
-    result = google_calculator(argstr)
-    if not result['error'].empty?
-      respond "#{env.nick}: Sorry, no results!"
+    result = wolfram_alpha(argstr)
+    
+    relevant_pods = result.select {|pod| ['Result', 'Results', 'Exact result', 'Input', 'Input interpretation'].include? pod[0] }.map {|pod| pod[1] }
+    if not relevant_pods.empty?
+      respond relevant_pods.join(' = ')
     else
-      respond "#{result['lhs']} = #{result['rhs']}"
+      respond "I don't know"
     end
   end
   
