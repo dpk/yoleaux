@@ -341,13 +341,13 @@ command_set :api do
     
     def etymology phrase
       out = OpenStruct.new
-      uri = URI "http://etymonline.com/index.php?search=#{URI.encode phrase}"
-      out.source = uri.to_s
+      uri = URI "http://etymonline.com/index.php?search=#{URI.encode phrase}&searchmode=term"
       src = Net::HTTP.get uri
       h = Nokogiri::HTML(src)
       out.headword = ((h % 'dt.highlight > a') or return nil).inner_text.strip
       text = ((h % 'dd.highlight') or return nil).inner_text
       out.gist = sentence_truncate text, 250
+      out.source = URI.join(uri.to_s, (h % 'dt.highlight > a')['href']).to_s.sub('&allowed_in_frame=0', '')
       out
     end
     
@@ -466,19 +466,6 @@ command_set :api do
     end
   end
   
-  command :follows, 'See if one Twitter user follows another' do
-    require_argstr
-    who, whom = argstr.split(' ')
-    result = does_follow(who, whom)
-    if result == true
-      respond "Yes, #{who} follows #{whom}."
-    elsif result == false
-      respond "No, #{who} doesn't follow #{whom}."
-    else
-      respond "(an error occurred while processing this directive)"
-    end
-  end
-  
   command :g, 'Search Google' do
     require_argstr
     respond (google(argstr) or "No results found.")
@@ -517,6 +504,10 @@ command_set :api do
     uri, header = argstr.split(' ')
     unless uri.match(/[.:\/]/)
       header, uri = uri, header
+    end
+    
+    if not uri.index('://')
+      uri = "http://#{uri}"
     end
     
     uri = URI uri
