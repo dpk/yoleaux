@@ -3,6 +3,7 @@
 require 'net/https'
 require 'json'
 require 'nokogiri' # RIP Hpricot
+require 'bigdecimal'
 
 command_set :api do
   helpers do
@@ -425,15 +426,25 @@ command_set :api do
     end
   end
   
-  command :c, 'Query Google Calculator' do
+  command :c, 'Query Wolfram Alpha for a calculator result' do
     require_argstr
     result = wolfram_alpha(argstr)
     
     relevant_pods = result.select {|pod| ['Result', 'Results', 'Exact result', 'Input', 'Input interpretation'].include? pod[0] }.map {|pod| pod[1] }
-    if not relevant_pods.empty?
-      respond relevant_pods.join(' = ')
-    else
+    approx = result.select {|pod| pod[0] == 'Decimal approximation' }[0]
+    
+    if (relevant_pods.length < 2) and not (relevant_pods.length == 1 and approx)
       respond "I don't know"
+    else
+      answer = relevant_pods.join(' = ')
+      if approx
+        approx = approx[1]
+        if m = approx.match(/\d+(\.\d+)/)
+          approx = BigDecimal.new(m[0]).round(15).to_s('F')
+        end
+        answer << " \u2248 #{approx}"
+      end
+      respond answer
     end
   end
   
