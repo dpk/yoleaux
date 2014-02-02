@@ -27,7 +27,7 @@ class Yoleaux
           do_tasks
         else
           # % 3600 prevents EINVAL when people (ahem, Ash) give stupid far-future timeouts
-          selectresult, _, _ = Queue.select [@inqueue, @spr], [], [], (timetillnext % 3600)
+          selectresult, _, _ = Queue.select [@inqueue, @spr], [], [], [timetillnext, 3600].min
           if selectresult
             selectresult.each do |i|
               if i == @inqueue
