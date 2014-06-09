@@ -1,7 +1,6 @@
-
 require 'securerandom'
 
-class Yoleaux
+module Yoleaux
   class Database
     def initialize name, value=nil
       @name = name

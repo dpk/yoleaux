@@ -1,4 +1,3 @@
-
 # this file is required by worker processes in order to load the command sets
 
 include Yoleaux::CommandSetHelper

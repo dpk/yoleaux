@@ -1,8 +1,7 @@
-
 # various data structures that get passed between processes;
 # most of these could be replaced by Structs
 
-class Yoleaux
+module Yoleaux
   class Dispatchable < OpenStruct
     def initialize id, other
       super({:id => id, :done => false, :started => nil, :handler_process => nil}.merge(other))

@@ -1,7 +1,6 @@
-
 # do you like my artworks? i call this one: WORLD'S WORST HAX
 
-class Yoleaux
+module Yoleaux
   class CommandSet
     def self.call *a, &b
       self.new.call *a, &b

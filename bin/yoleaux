@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'getoptlong'
-require './yoleaux.rb'
+require 'yoleaux'
 
 base = "#{ENV['HOME']}/.yoleaux"
 Dir.mkdir base if not File.directory? base
@@ -85,4 +85,3 @@ EOF
 else
   puts help
 end
-

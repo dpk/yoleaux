@@ -1,5 +1,4 @@
-
-class Yoleaux
+module Yoleaux
   # the sender is responsible for actually talking to the server. it's a
   # bit of abstraction to allow buffering and flood control to happen
   # without interfering with important, time-sensitive goings-on in the
@@ -53,4 +52,3 @@ class Yoleaux
     end
   end
 end
-

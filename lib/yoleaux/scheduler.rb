@@ -1,5 +1,4 @@
-
-class Yoleaux
+module Yoleaux
   # the scheduler is a process for putting objects in, and getting them
   # out again at a specific later time. eg. send in [4, "hello world"]
   # and it will return "hello world" after 4 seconds

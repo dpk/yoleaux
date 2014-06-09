@@ -1,5 +1,4 @@
-
-class Yoleaux
+module Yoleaux
   class Worker
     attr_reader :pid, :inqueue, :outqueue
   

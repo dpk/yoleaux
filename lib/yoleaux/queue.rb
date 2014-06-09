@@ -1,5 +1,4 @@
-
-class Yoleaux
+module Yoleaux
   class Queue
     def self.select r, w=[], e=[], timeout=nil
       rmaps = {}
