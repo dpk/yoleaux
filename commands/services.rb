@@ -15,7 +15,7 @@
 require 'net/http'
 require 'securerandom'
 
-class Yoleaux
+module Yoleaux
   class ServiceCommands
     @@special_commands = %w{add-command del-command command-help o}
     @@commands = {}
@@ -192,12 +192,12 @@ class Yoleaux
     end
     
     def self.load_commands_list
-      db = "#{Yoleaux::BASE}/services.db"
+      db = "#{Yoleaux::Bot::BASE}/services.db"
       File.write(db, Marshal.dump({})) if not File.exist? db
       @@commands = Marshal.load File.read(db)
     end
     def self.save_commands_list
-      db = "#{Yoleaux::BASE}/services.db"
+      db = "#{Yoleaux::Bot::BASE}/services.db"
       temp = db+".#{SecureRandom.hex(4)}"
       File.write(temp, Marshal.dump(@@commands))
       File.rename temp, db
@@ -210,5 +210,5 @@ class Yoleaux
   end
 end
 
-Yoleaux.command_sets << [:services, Yoleaux::ServiceCommands]
+Yoleaux::Bot.command_sets << [:services, Yoleaux::ServiceCommands]
 

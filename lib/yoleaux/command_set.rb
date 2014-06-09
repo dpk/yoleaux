@@ -216,7 +216,7 @@ module Yoleaux
   module CommandSetHelper
     def command_set name, &block
       pkg = Class.new(CommandSet, &block)
-      Yoleaux.command_sets << [name, pkg]
+      Yoleaux::Bot.command_sets << [name, pkg]
       pkg.name = name
     end
   end

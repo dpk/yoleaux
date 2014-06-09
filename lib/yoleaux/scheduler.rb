@@ -68,8 +68,8 @@ module Yoleaux
     end
     
     def load_schedule
-      if File.exist? "#{Yoleaux::BASE}/schedule.db"
-        @schedule = Marshal.load File.read "#{Yoleaux::BASE}/schedule.db"
+      if File.exist? "#{Yoleaux::Bot::BASE}/schedule.db"
+        @schedule = Marshal.load File.read "#{Yoleaux::Bot::BASE}/schedule.db"
         sort_schedule
       else
         @schedule = []
@@ -80,9 +80,9 @@ module Yoleaux
       @schedule.sort_by! &:first
     end
     def write_schedule
-      tempname = "#{Yoleaux::BASE}/.schedule.#{SecureRandom.hex(4)}.db"
+      tempname = "#{Yoleaux::Bot::BASE}/.schedule.#{SecureRandom.hex(4)}.db"
       File.write tempname, Marshal.dump(@schedule)
-      File.rename tempname, "#{Yoleaux::BASE}/schedule.db"
+      File.rename tempname, "#{Yoleaux::Bot::BASE}/schedule.db"
     end
   end
 end  

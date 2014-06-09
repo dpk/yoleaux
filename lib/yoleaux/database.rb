@@ -5,7 +5,7 @@ module Yoleaux
     def initialize name, value=nil
       @name = name
       @value = value
-      @file = "#{Yoleaux::BASE}/#{name}.db"
+      @file = "#{Yoleaux::Bot::BASE}/#{name}.db"
       if File.exist? @file
         @value = Marshal.load File.read @file
       else

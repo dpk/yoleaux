@@ -63,10 +63,10 @@ module Yoleaux
       when 'commands'
         argstr = command.args.to_s.strip
         if argstr.empty?
-          @outqueue.send Message.new command.channel, "Commands are divided into categories: #{Yoleaux.command_sets.map(&:first).join ', '}. Use #{command.prefix}commands <category> to get a list of the commands in each."
+          @outqueue.send Message.new command.channel, "Commands are divided into categories: #{Yoleaux::Bot.command_sets.map(&:first).join ', '}. Use #{command.prefix}commands <category> to get a list of the commands in each."
         else
           set = nil
-          Yoleaux.command_sets.sort {|a,b| b[1].priority <=> a[1].priority }.each do |s|
+          Yoleaux::Bot.command_sets.sort {|a,b| b[1].priority <=> a[1].priority }.each do |s|
             if s.first.to_s == argstr.downcase
               set = s[1]
               break
@@ -106,13 +106,13 @@ module Yoleaux
       command_set = nil
       if callback.name.is_a? Array
         setname, cbname = callback.name
-        Yoleaux.command_sets.each do |set|
+        Yoleaux::Bot.command_sets.each do |set|
           if setname == set.first
             command_set = set[1]
           end
         end
       else
-        Yoleaux.command_sets.each do |set|
+        Yoleaux::Bot.command_sets.each do |set|
           if set[1].has_callback? callback.name
             command_set = set[1]
           end
@@ -139,7 +139,7 @@ module Yoleaux
     def set_for command_name
       namespace, cname = (command_name.include?('.') ? command_name.split('.') : [nil, command_name])
       command_set = nil
-      Yoleaux.command_sets.sort {|a,b| b[1].priority <=> a[1].priority }.each do |set|
+      Yoleaux::Bot.command_sets.sort {|a,b| b[1].priority <=> a[1].priority }.each do |set|
         sname, set = set
        
         if namespace and sname.to_s == namespace

@@ -340,7 +340,7 @@ module Yoleaux
     end
   
     def read_config
-      @config = YAML.load_file "#{Yoleaux::BASE}/config.yaml"
+      @config = YAML.load_file "#{BASE}/config.yaml"
       @server = (@config['server'] or raise 'no server option in config')
       @port = (@config['port'] or 6667)
       @nick = (@config['nick'] or raise 'no nick option in config')
@@ -366,7 +366,7 @@ module Yoleaux
       @config['command_timeout'] = @timeout
       @config['admins'] = @admins
       @config['privacy'] = @privacy
-      File.write "#{Yoleaux::BASE}/config.yaml", @config.to_yaml
+      File.write "#{BASE}/config.yaml", @config.to_yaml
     end
   
     def private_msg? channel, nick, msg
