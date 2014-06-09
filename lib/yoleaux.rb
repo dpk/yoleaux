@@ -1,5 +1,11 @@
 require "yoleaux/version"
 
+require 'socket'
+require 'time'
+require 'securerandom'
+require 'ostruct'
+require 'yaml'
+
 require "yoleaux/bot"
 require "yoleaux/command_set"
 require "yoleaux/database"
