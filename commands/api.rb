@@ -614,19 +614,19 @@ command_set :api do
     end
   end
   
-#   command :title, 'Get the title of a web page' do
-#     title = page_title normalize_url (if argstr.empty?
-#       env.last_url
-#     else
-#       argstr
-#     end)
-#     
-#     if title
-#       respond title[0...512]
-#     else
-#       respond "#{env.nick}: Sorry, that doesn't appear to be an HTML page."
-#     end
-#   end
+  command :title, 'Get the title of a web page' do
+    title = page_title normalize_url (if argstr.empty?
+      env.last_url
+    else
+      argstr
+    end)
+     
+    if title
+      respond title[0...512]
+    else
+      respond "#{env.nick}: Sorry, that doesn't appear to be an HTML page."
+    end
+  end
   
   command :tr, 'Translate some text between languages' do
     require_argtext
