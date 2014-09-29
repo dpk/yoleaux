@@ -250,15 +250,18 @@ command_set :api do
         out.entry = out.entry[0...-(out.homograph.length)]
       end
       out.pronunciation = ((content % 'div.headpron').inner_text.strip[15..-1].gsub("\u00A0", ' ').gsub(/\s{2,}/, '').gsub(' ,', ', ').gsub(' /', '/') rescue nil)
+      # see http://www.phon.ucl.ac.uk/home/wells/ipa-english-uni.htm
+      out.pronunciation = out.pronunciation.gsub('əː', 'ɜː').gsub(/a(?!ʊ)/, 'æ').gsub('ʌɪ', 'aɪ').gsub('ɛː', 'eə')
+      
       out.senses = []
       content.search('section.senseGroup').each do |sg|
         sense = OpenStruct.new
         sense.word_type = ((sg % 'span.partOfSpeech').inner_text rescue nil).strip
         sense.inflections = sg.search('span.inflection').map(&:inner_text)
         sense.meanings = []
-        sg.search('ul.sense-entry').each do |se|
+        sg.search('div.sense').each do |se|
           entry = OpenStruct.new
-          entry.definition = (se % 'li.sense span.definition').inner_text.strip
+          entry.definition = (se % 'span.definition').inner_text.strip
           entry.examples = se.search('li.sense em.example').map {|ex| ex.inner_text.strip }
           entry.subsenses = se.search('li.subSense').map {|ss| OpenStruct.new(:definition => (ss % 'span.definition').inner_text, :examples => ss.search('em.example').map(&:inner_text)) }
           sense.meanings << entry
@@ -665,7 +668,7 @@ command_set :api do
   
   command :w, 'Look up a word in the Oxford Dictionary of English (not to be confused with the Oxford English Dictionary)' do
     require_argstr
-    maxlen = 450
+    maxlen = 430
     maxsenselen = 200
     result = dict argstr
     halt respond("Sorry, I couldn't find a definition for '#{argstr}'.") if result.nil?
