@@ -32,8 +32,8 @@ module Yoleaux
       
       @last_url = {}
       
-      trap('INT')  { stop }
-      trap('TERM') { stop }
+      trap('INT')  { @spw.write_nonblock STOPSIG }
+      trap('TERM') { @spw.write_nonblock STOPSIG }
       trap('CHLD') { @spw.write_nonblock CHLDSIG }
       
       handle_loop
@@ -197,55 +197,44 @@ module Yoleaux
     end
   
     def privmsg channel, prefix=nil, msg
-      msg = fix_encoding msg
+      umsg = fix_encoding msg
+      bprefix = (prefix ? fix_encoding(prefix).force_encoding('binary') : nil)
       # loop prevention. a mechanism like Delivered-To would be useful here, IRC!
-      if @last_msgs.count([channel, msg]) > 4
+      if @last_msgs.count([channel, umsg]) > 4
         if @last_msgs.count([channel, '...']) > 2
           @log.puts "A loop-prevention loop happened in #{channel}! There is probably some funny business going on!"
           return
         else
-          msg = '...'
+          umsg = '...'
         end
       end
-      if m=msg.scan(@@uri_regexp).last
+      if m=umsg.scan(@@uri_regexp).last
         @last_url[channel] = m.first
       end
-      @last_msgs.unshift [channel, msg]
+      @last_msgs.unshift [channel, umsg]
     
-      # break lines
-      msgs = [msg]
       maxlen = 498 - @address.length - channel.length - (prefix ? (prefix.bytesize + 1) : 0)
-      # todo: configurable max line length
-      while msgs.last.bytesize > maxlen
-        lastline = msgs.last
-        pieces = lastline.split(/\b/)
-        newline = ''
-      
-        lasti = 0
-        pieces.each_with_index do |piece, i|
-          lasti = i
-          if (newline.bytesize + piece.bytesize) >= (maxlen - 5)
-            break
+      bmsgs = []
+      bmsg_chunks = umsg.split(/\b/).map {|chunk| chunk.force_encoding('binary') }
+      current_bmsg = ''.force_encoding('binary')
+      bmsg_chunks.each do |bchunk|
+        if current_bmsg.bytesize + bchunk.bytesize > maxlen
+          if current_bmsg.empty?
+            bsubchunks = bchunk.chars.each_slice(maxlen).to_a.map {|s| s.to_s }
+            bsubchunks[0...-1].each {|bsubchunk| bmsgs << bsubchunk }
+            current_bmsg = bsubchunks[-1]
+          else
+            bmsgs << current_bmsg
+            current_bmsg = bchunk.dup
           end
-          newline << piece
-        end
-        if lasti == 0
-          len = 0
-          newline = lastline.each_char.take_while {|c| (len += c.bytesize) <= (maxlen - 20) }.join + " \u2026"
-          lastline = lastline[(newline.length-2)..-1]
-          msgs[-1] = newline
-          msgs << lastline
-        elsif lasti < pieces.length - 1
-          lastline = lastline[newline.length..-1]
-          newline << " \u2026"
-          msgs[-1] = newline
-          msgs << lastline
         else
-          # hum
+          current_bmsg << bchunk
         end
       end
-      msgs.each do |msg|
-        send 'PRIVMSG', [channel], "#{"#{prefix} " if prefix}#{msg}"
+      (bmsgs << current_bmsg) unless current_bmsg.empty?
+      
+      bmsgs.each do |bmsg|
+        send 'PRIVMSG', [channel], "#{"#{bprefix} " if bprefix}#{bmsg}"
       end
     end
     def send command, params=[], text=nil
@@ -300,6 +289,7 @@ module Yoleaux
       inqueue = Queue.new
       outqueue = Queue.new
       pid = fork do
+        $0 = kind.to_s
         inqueue.close_write
         outqueue.close_read
     
