@@ -244,8 +244,8 @@ command_set :api do
       content = (h % '.entryPageContent')
       out = OpenStruct.new
       out.url = resp['Location']
-      out.entry = (content % 'h2.pageTitle').inner_text
-      out.homograph = ((content % 'h2.pageTitle span.homograph').inner_text.strip rescue nil)
+      out.entry = (content % '.pageTitle').inner_text
+      out.homograph = ((content % '.pageTitle span.homograph').inner_text.strip rescue nil)
       if out.homograph
         out.entry = out.entry[0...-(out.homograph.length)]
       end
