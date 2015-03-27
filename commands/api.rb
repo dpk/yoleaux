@@ -20,6 +20,9 @@ command_set :api do
         uri = URI "http://www.google.com/search?&q=#{URI.encode(query)}&nfpr=1&filter=0"
         http = Net::HTTP.new(uri.host)
         response = http.request_get(uri.path+'?'+uri.query, {'User-Agent' => 'Mozilla/5.0'})
+	if response.is_a? Net::HTTPRedirection
+          response = http.request_get(response['location'], {'User-Agent' => 'Mozilla/5.0'})
+        end
         h = Nokogiri::HTML(response.body)
         if (h % 'div.e') and (h % 'div.e').inner_text.include? 'No results found'
           counts[:site] = 0
@@ -748,4 +751,3 @@ command_set :api do
     end
   end
 end
-
