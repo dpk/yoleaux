@@ -200,7 +200,7 @@ command_set :api do
     
     def translate from='auto', to='en', text
       uri = URI "https://translate.google.com/"
-      http = Net::HTTP.new(uri.host)
+      http = Net::HTTP.new(uri.host, 443)
       sslify(uri, http)
       params = {
         "sl" => from.downcase,
@@ -212,12 +212,11 @@ command_set :api do
         "text" => text
       }
       response = http.request_post(uri.path, URI.encode_www_form(params), {'User-Agent' => 'Mozilla/5.0'})
-      puts response.body
       h = Nokogiri::HTML response.body
       translation = (h % '#result_box').inner_text
-      from = (h % '#nc_dl')['value']
-      from = (h % '#nc_sl')['value'] if from.empty?
-      to = (h % '#nc_tl')['value']
+      info = Hash[URI.decode_www_form(URI((h % '#gt-otf-switch')['href']).query)]
+      from = info['sl']
+      to = info['tl']
       return OpenStruct.new :from => from, :to => to, :translation => translation
     end
     
