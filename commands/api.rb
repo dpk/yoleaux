@@ -199,8 +199,9 @@ command_set :api do
     end
     
     def translate from='auto', to='en', text
-      uri = URI "http://translate.google.com/"
+      uri = URI "https://translate.google.com/"
       http = Net::HTTP.new(uri.host)
+      sslify(uri, http)
       params = {
         "sl" => from.downcase,
         "tl" => to.downcase,
@@ -211,6 +212,7 @@ command_set :api do
         "text" => text
       }
       response = http.request_post(uri.path, URI.encode_www_form(params), {'User-Agent' => 'Mozilla/5.0'})
+      puts response.body
       h = Nokogiri::HTML response.body
       translation = (h % '#result_box').inner_text
       from = (h % '#nc_dl')['value']
@@ -316,7 +318,7 @@ command_set :api do
     def wikipedia lang='en', search
       maxlen = 350
       
-      uri = URI "http://#{lang}.wikipedia.org/w/index.php?search=#{URI.encode search}&title=Special%3ASearch"
+      uri = URI "https://#{lang}.wikipedia.org/w/index.php?search=#{URI.encode search}&title=Special%3ASearch"
       http = Net::HTTP.new(uri.host, uri.port)
       sslify(uri, http)
       path = "#{uri.path.empty? ? '/' : uri.path}#{'?'+uri.query if uri.query}"
@@ -324,13 +326,13 @@ command_set :api do
       article_url = (resp['Location'] or google("site:#{lang}.wikipedia.org/wiki #{search}"))
       return nil if article_url.nil?
       article_slug = article_url.match(%r{\.wikipedia\.org/wiki/(.*)}i)[1]
-      categories = Net::HTTP.get(URI("http://en.wikipedia.org/w/api.php?action=query&prop=categories&titles=#{article_slug}&format=json"))
+      categories = http_get("https://en.wikipedia.org/w/api.php?action=query&prop=categories&titles=#{article_slug}&format=json").body
       categories = JSON.parse categories
       disambig = categories['query']['pages'].first[1]['categories'].to_a.map{|x| x['title'] }.include? 'Category:Disambiguation pages'
       if disambig
         return OpenStruct.new :url => article_url, :gist => "Disambiguation: #{categories['query']['pages'].first[1]['title']}"
       else
-        json_src = Net::HTTP.get(URI("http://#{lang}.wikipedia.org/w/api.php?action=mobileview&page=#{article_slug}&format=json&sections=0"))
+        json_src = http_get("https://#{lang}.wikipedia.org/w/api.php?action=mobileview&page=#{article_slug}&format=json&sections=0").body
         j = JSON.parse(json_src)
         html_src = j['mobileview']['sections'][0]['text']
         h = Nokogiri::HTML(html_src)
