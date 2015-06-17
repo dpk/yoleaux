@@ -573,11 +573,12 @@ command_set :api do
     require_argstr
     phrase = argstr
     prevlang = 'en'
-    %w{la sr ta sw ht en}.each do |lang|
+    langs = %w{la sr ta sw ht en iw zh fi eo eu az lt tr fr de}
+    langs.sample(4).each do |lang|
       phrase = translate(prevlang, lang, phrase).translation
       prevlang = lang
     end
-    respond phrase
+    respond translate(prevlang, 'en', phrase).translation
   end
   
   command :news, 'Search for a recent news article' do
