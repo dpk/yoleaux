@@ -184,7 +184,7 @@ command_set :general do
     require_argstr
     choices = argstr.split(argstr.include?(';') ? ';' : ',').map {|opt| opt.strip }.uniq.sort
     halt respond "#{env.nick}: You must provide at least two options." unless choices.length > 1
-    hash = Digest::SHA256.hexdigest(choices.map(&:downcase).join("\x00")).to_i(16)
+    hash = Digest::SHA256.hexdigest(choices.map(&:downcase).join("\x00") + "\x00" + Time.now.strftime('%Y%m%d%H')).to_i(16)
     respond choices[hash % choices.length]
   end
   alias_command :choose, :pick
