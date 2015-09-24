@@ -3,6 +3,11 @@ require 'digest/sha2'
 require 'time'
 require 'tzinfo'
 
+require 'net/http'
+require 'json'
+require 'uri'
+
+
 command_set :general do
   helpers do
     def parse_time_interval time
@@ -31,7 +36,7 @@ command_set :general do
       alerttime = (time.is_a?(Numeric) ? (Time.now + time) : time)
       respond "#{env.nick}: I'll remind you #{(alerttime.to_date != Time.now.to_date) ? 'on' : 'at'} #{format_time alerttime}"
     end
-   
+    
     def format_time time
       tz = (current_timezone || utc)
       (if tz.now.to_date == tz.utc_to_local(time).to_date
@@ -40,7 +45,21 @@ command_set :general do
         tz.strftime("%e %b %Y %H:%M %Z", time).strip
       end).sub(/ (?:UTC|GMT)$/, 'Z')
     end
-   
+    
+    def timezone location
+      tz = (TZInfo::Timezone.get(argstr) rescue nil)
+      if not tz
+        location_result = JSON.parse Net::HTTP.get("http://api.geonames.org/searchJSON?q=#{URI.encode location, /./}&maxRows=1&username=yoleaux")
+        location = location_result['geonames'][0] rescue (return nil)
+        lat, lon = location['lat'], location['lng']
+        
+        tz_result = JSON.parse Net::HTTP.get("http://api.geonames.org/timezoneJSON?lat=#{lat}&lng=#{lon}&username=yoleaux")
+        return (TZInfo::Timezone.get(tz_result['timezoneId']) rescue nil)
+      else
+        return tz
+      end
+    end
+    
     def utc; TZInfo::Timezone.get('UTC'); end
     def current_timezone user=nil
       tzdb = db(:timezones)
@@ -97,11 +116,11 @@ command_set :general do
         respond utc.strftime(format)
       end
     else
-      tz = (TZInfo::Timezone.get(argstr) rescue nil)
+      tz = timezone(argstr)
       if tz
-        respond tz.strftime(format)
+        respond "#{tz.strftime(format)} (#{tz.name})"
       else
-        respond "#{env.nick}: Sorry, I don't know a timezone by that name."
+        respond "#{env.nick}: Sorry, I don't know what timezone that is. If in doubt, see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of options."
       end
     end
   end
@@ -118,13 +137,13 @@ command_set :general do
         respond "#{env.nick}: Your timezone setting is #{tzname}, currently #{tz.strftime("%Z")}."
       end
     else
-      tzname = argstr
-      tz = (TZInfo::Timezone.get(tzname) rescue nil)
+      tz = timezone(argstr)
+      tzname = tz.name
       if tz
         tzdb[who] = tzname
         respond "#{env.nick}: Changed your timezone to #{tzname}. (Current date and time: #{tz.strftime("%Y-%m-%d %H:%M:%S")})"
       else
-        respond "#{env.nick}: Sorry, I don't know what timezone that is. See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of options."
+        respond "#{env.nick}: Sorry, I don't know what timezone that is. If in doubt, see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for a list of options."
       end
     end
   end
