@@ -51,7 +51,7 @@ command_set :general do
       if not tz
         location_result = JSON.parse Net::HTTP.get(URI "http://api.geonames.org/searchJSON?q=#{URI.encode location, /./}&maxRows=1&username=yoleaux")
         location = location_result['geonames'][0] rescue (return nil)
-        lat, lon = location['lat'], location['lng']
+        lat, lon = location['lat'], location['lng'] rescue (return nil)
         
         tz_result = JSON.parse Net::HTTP.get(URI "http://api.geonames.org/timezoneJSON?lat=#{lat}&lng=#{lon}&username=yoleaux")
         return (TZInfo::Timezone.get(tz_result['timezoneId']) rescue nil)
