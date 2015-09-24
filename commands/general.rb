@@ -49,11 +49,11 @@ command_set :general do
     def timezone location
       tz = (TZInfo::Timezone.get(argstr) rescue nil)
       if not tz
-        location_result = JSON.parse Net::HTTP.get("http://api.geonames.org/searchJSON?q=#{URI.encode location, /./}&maxRows=1&username=yoleaux")
+        location_result = JSON.parse Net::HTTP.get(URI "http://api.geonames.org/searchJSON?q=#{URI.encode location, /./}&maxRows=1&username=yoleaux")
         location = location_result['geonames'][0] rescue (return nil)
         lat, lon = location['lat'], location['lng']
         
-        tz_result = JSON.parse Net::HTTP.get("http://api.geonames.org/timezoneJSON?lat=#{lat}&lng=#{lon}&username=yoleaux")
+        tz_result = JSON.parse Net::HTTP.get(URI "http://api.geonames.org/timezoneJSON?lat=#{lat}&lng=#{lon}&username=yoleaux")
         return (TZInfo::Timezone.get(tz_result['timezoneId']) rescue nil)
       else
         return tz
