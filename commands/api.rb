@@ -8,16 +8,10 @@ require 'bigdecimal'
 command_set :api do
   helpers do
     def google query
-      src = Net::HTTP.get URI("http://ajax.googleapis.com/ajax/services/search/web?v=1.0&q=#{URI.encode query}&ip=127.0.0.1")
-      result = JSON.parse src
-      if result.has_key? 'responseData' and
-         result['responseData'].has_key? 'results' and
-         not result['responseData']['results'].empty? and
-         result['responseData']['results'].first.has_key? 'unescapedUrl'
-        return result['responseData']['results'].first['unescapedUrl']
-      else
-        return nil
-      end
+      uri = URI "http://www.google.com/search?&q=#{URI.encode(query)}&btnI="
+      http = Net::HTTP.new(uri.host)
+      response = http.request_get(uri.path+'?'+uri.query, {'User-Agent' => 'Mozilla/5.0', 'Referer' => 'http://www.google.com/'})
+      response['Location']
     end
     
     def google_count query, kinds=[:site, :api]
